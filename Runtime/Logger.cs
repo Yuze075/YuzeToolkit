@@ -4,30 +4,30 @@
     {
         private static string[] Tags { get; } = new[] { "Utility" };
 
-        public static void Log(string massage)
+        public static void Log(string message)
         {
 #if LOGGER_SYSTEM
-            LoggerSystem.LoggerSystem.Log(massage, Tags);
+            LoggerSystem.LoggerSystem.Log(message, Tags);
 #else
-            UnityEngine.Debug.Log(massage);
+            UnityEngine.Debug.Log(message);
 #endif
         }
 
-        public static void Warning(string massage)
+        public static void Warning(string message)
         {
 #if LOGGER_SYSTEM
-            LoggerSystem.LoggerSystem.Warning(massage, Tags);
+            LoggerSystem.LoggerSystem.Warning(message, Tags);
 #else
-            UnityEngine.Debug.LogWarning(massage);
+            UnityEngine.Debug.LogWarning(message);
 #endif
         }
 
-        public static void Error(string massage)
+        public static void Error(string message)
         {
 #if LOGGER_SYSTEM
-            LoggerSystem.LoggerSystem.Error(massage, Tags);
+            LoggerSystem.LoggerSystem.Error(message, Tags);
 #else
-            UnityEngine.Debug.LogError(massage);
+            UnityEngine.Debug.LogError(message);
 #endif
         }
 
