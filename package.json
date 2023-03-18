@@ -1,0 +1,12 @@
+{
+    "name" : "com.yuzetoolkit.framework.utility",
+    "version": "1.0.0",
+    "displayName" : "YuzeUtility",
+    "description" : "公用脚本",
+    "unity": "2019.1",
+    "author": {
+        "name": "Yzue",
+        "email": "925581968@qq.com",
+        "url": "https://github.com/Yuze075"
+    }
+}
