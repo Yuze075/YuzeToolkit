@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace YuzeToolkit.Framework.Utility.Editor
 {
-    [CustomPropertyDrawer(typeof(SerializedDictionaryAttribute))]
-    public class SerializedDictionaryDrawer : PropertyDrawer
+    [CustomPropertyDrawer(typeof(SdAttribute))]
+    public class SdDrawer : PropertyDrawer
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {

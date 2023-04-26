@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace YuzeToolkit.Framework.Utility.Editor
 {
-    [CustomPropertyDrawer(typeof(PairAttribute))]
-    public class PairDrawer : PropertyDrawer
+    [CustomPropertyDrawer(typeof(KvAttribute))]
+    public class KvDrawer : PropertyDrawer
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {

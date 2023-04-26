@@ -7,18 +7,17 @@ using UnityEngine;
 namespace YuzeToolkit.Framework.Utility
 {
     [AttributeUsage(AttributeTargets.Field)]
-    public class PairAttribute : PropertyAttribute
+    public class KvAttribute : PropertyAttribute
     {
     }
-    
+
     [AttributeUsage(AttributeTargets.Field)]
-    public class SerializedDictionaryAttribute : PropertyAttribute
+    public class SdAttribute : PropertyAttribute
     {
     }
 
     [Serializable]
-    public class SerializedDictionary<TK, TV> : IDictionary<TK, TV>,
-        ISerializationCallbackReceiver
+    public class SerializedDictionary<TK, TV> : IDictionary<TK, TV>, ISerializationCallbackReceiver
     {
         [Serializable]
         private struct KeyValuePair
@@ -45,21 +44,46 @@ namespace YuzeToolkit.Framework.Utility
             }
         }
 
-        [SerializeField] [Pair] private List<KeyValuePair> pairs;
-
-        private readonly Dictionary<TK, int> _indexByKey = new();
-        private readonly Dictionary<TK, TV> _dictionary = new();
-
-        [SerializeField, HideInInspector] private bool error;
-
-
-        private void UpdateIndexes(int removedIndex)
+        public SerializedDictionary()
         {
-            for (var i = removedIndex; i < pairs.Count; i++)
+            capacity = 10;
+            pairs = new List<KeyValuePair>(capacity);
+            _dictionary = new Dictionary<TK, TV>(capacity);
+        }
+
+        public SerializedDictionary(int capacity)
+        {
+            this.capacity = capacity;
+            pairs = new List<KeyValuePair>(capacity);
+            _dictionary = new Dictionary<TK, TV>(capacity);
+        }
+
+        public SerializedDictionary(Dictionary<TK, TV> dictionary)
+        {
+            capacity = dictionary.Count;
+            pairs = new List<KeyValuePair>(capacity);
+            _dictionary = new Dictionary<TK, TV>(dictionary);
+            foreach (var kv in dictionary)
             {
-                var key = pairs[i].Key;
-                _indexByKey[key]--;
+                pairs.Add(new KeyValuePair(kv.Key, kv.Value));
             }
+        }
+
+        [SerializeField] [Kv] private List<KeyValuePair> pairs;
+        [SerializeField, HideInInspector] private bool error;
+        [SerializeField, HideInInspector] public int capacity;
+        private readonly Dictionary<TK, TV> _dictionary;
+        public bool Error => error;
+
+        public void Clear()
+        {
+            pairs.Clear();
+            _dictionary.Clear();
+        }
+
+        public Dictionary<TK, TV> ToNativeDictionary()
+        {
+            return new Dictionary<TK, TV>(_dictionary);
         }
 
         #region ISerializationCallbackReceiver
@@ -71,16 +95,15 @@ namespace YuzeToolkit.Framework.Utility
         void ISerializationCallbackReceiver.OnAfterDeserialize()
         {
             _dictionary.Clear();
-            _indexByKey.Clear();
+            _dictionary.EnsureCapacity(capacity);
             error = false;
 
-            for (var i = 0; i < pairs.Count; i++)
+            foreach (var kv in pairs)
             {
-                var key = pairs[i].Key;
+                var key = kv.Key;
                 if (key != null && !ContainsKey(key))
                 {
-                    _dictionary.Add(key, pairs[i].Value);
-                    _indexByKey.Add(key, i);
+                    _dictionary.Add(key, kv.Value);
                 }
                 else
                 {
@@ -91,11 +114,42 @@ namespace YuzeToolkit.Framework.Utility
 
         #endregion
 
+        #region IDictionary<TK, TV>
+
+        public TV this[TK key]
+        {
+            get => _dictionary[key];
+            set
+            {
+                if (_dictionary.ContainsKey(key))
+                {
+                    var count = pairs.Count;
+                    for (var i = 0; i < count; i++)
+                    {
+                        var kv = pairs[i];
+                        if (!EqualityComparer<TK>.Default.Equals(kv.Key, key)) continue;
+                        pairs[i] = new KeyValuePair(key, value);
+                        break;
+                    }
+
+                    _dictionary[key] = value;
+                }
+                else
+                {
+                    _dictionary.Add(key, value);
+                    pairs.Add(new KeyValuePair(key, value));
+                }
+            }
+        }
+
+        public ICollection<TK> Keys => _dictionary.Keys;
+
+        public ICollection<TV> Values => _dictionary.Values;
+
         public void Add(TK key, TV value)
         {
             pairs.Add(new KeyValuePair(key, value));
             _dictionary.Add(key, value);
-            _indexByKey.Add(key, pairs.Count - 1);
         }
 
         public bool ContainsKey(TK key)
@@ -106,10 +160,15 @@ namespace YuzeToolkit.Framework.Utility
         public bool Remove(TK key)
         {
             if (!_dictionary.Remove(key)) return false;
-            var index = _indexByKey[key];
-            pairs.RemoveAt(index);
-            UpdateIndexes(index);
-            _indexByKey.Remove(key);
+            var count = pairs.Count;
+            for (var i = 0; i < count; i++)
+            {
+                var kv = pairs[i];
+                if (!EqualityComparer<TK>.Default.Equals(kv.Key, key)) continue;
+                pairs.RemoveAt(i);
+                break;
+            }
+
             return true;
         }
 
@@ -118,85 +177,60 @@ namespace YuzeToolkit.Framework.Utility
             return _dictionary.TryGetValue(key, out value);
         }
 
-        public void Clear()
-        {
-            pairs.Clear();
-            _dictionary.Clear();
-            _indexByKey.Clear();
-        }
+        #endregion
 
-        public Dictionary<TK, TV> BuildNativeDictionary()
-        {
-            return new Dictionary<TK, TV>(_dictionary);
-        }
+        #region ICollection<KeyValuePair<TK, TV>>
+
+        public int Count => _dictionary.Count;
+
+        public bool IsReadOnly => false;
 
         void ICollection<KeyValuePair<TK, TV>>.Add(KeyValuePair<TK, TV> pair)
         {
             Add(pair.Key, pair.Value);
         }
 
-        bool ICollection<KeyValuePair<TK, TV>>.Contains(KeyValuePair<TK, TV> pair)
+        void ICollection<KeyValuePair<TK, TV>>.Clear()
         {
-            return _dictionary.TryGetValue(pair.Key, out var value) &&
-                   EqualityComparer<TV>.Default.Equals(value, pair.Value);
+            Clear();
         }
 
-        bool ICollection<KeyValuePair<TK, TV>>.Remove(KeyValuePair<TK, TV> pair)
+        bool ICollection<KeyValuePair<TK, TV>>.Contains(KeyValuePair<TK, TV> pair)
         {
-            if (!_dictionary.TryGetValue(pair.Key, out var value)) return false;
-            var isEqual = EqualityComparer<TV>.Default.Equals(value, pair.Value);
-            return isEqual && Remove(pair.Key);
+            return TryGetValue(pair.Key, out var value) &&
+                   EqualityComparer<TV>.Default.Equals(value, pair.Value);
         }
 
         void ICollection<KeyValuePair<TK, TV>>.CopyTo(KeyValuePair<TK, TV>[] array, int index)
         {
-            ICollection collection = _dictionary;
-            collection.CopyTo(array, index);
+            (_dictionary as ICollection).CopyTo(array, index);
         }
+
+        bool ICollection<KeyValuePair<TK, TV>>.Remove(KeyValuePair<TK, TV> pair)
+        {
+            if (TryGetValue(pair.Key, out var value) &&
+                EqualityComparer<TV>.Default.Equals(value, pair.Value)) return Remove(pair.Key);
+            return false;
+        }
+
+        #endregion
+
+        #region IEnumerable<KeyValuePair<TK, TV>>
 
         IEnumerator<KeyValuePair<TK, TV>> IEnumerable<KeyValuePair<TK, TV>>.GetEnumerator()
         {
             return _dictionary.GetEnumerator();
         }
 
+        #endregion
+
+        #region IEnumerable
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _dictionary.GetEnumerator();
         }
 
-
-        /// <summary>
-        /// Indicates if there is a key collision in serialized pairs.
-        /// Duplicated keys (pairs) won't be added to the final dictionary.
-        /// This property is crucial for Editor-related functions.
-        /// </summary>
-        internal bool Error => error;
-
-        public int Count => _dictionary.Count;
-
-        public bool IsReadOnly => false;
-
-        public ICollection<TK> Keys => _dictionary.Keys;
-
-        public ICollection<TV> Values => _dictionary.Values;
-
-        public TV this[TK key]
-        {
-            get => _dictionary[key];
-            set
-            {
-                _dictionary[key] = value;
-                if (_indexByKey.ContainsKey(key))
-                {
-                    var index = _indexByKey[key];
-                    pairs[index] = new KeyValuePair(key, value);
-                }
-                else
-                {
-                    pairs.Add(new KeyValuePair(key, value));
-                    _indexByKey.Add(key, pairs.Count - 1);
-                }
-            }
-        }
+        #endregion
     }
 }
