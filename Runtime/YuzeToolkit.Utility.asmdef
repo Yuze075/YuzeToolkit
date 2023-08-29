@@ -1,12 +1,8 @@
 {
-    "name": "YuzeToolkit.Framework.Utility.Editor",
+    "name": "YuzeToolkit.Utility",
     "rootNamespace": "",
-    "references": [
-        "GUID:666055ac4e2c9cc4ca327594a46bdb10"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
