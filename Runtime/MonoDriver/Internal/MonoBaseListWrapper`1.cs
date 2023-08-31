@@ -11,47 +11,46 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 用于封装<see cref="MonoBase"/>的结构体, 记录自身<see cref="WrapperType"/>
         /// </summary>
-        internal struct MonoBaseWrapper
+        public struct MonoBaseWrapper
         {
             /// <summary>
             /// 默认构造函数, 用于绑定对应的空栈和自身Index
             /// </summary>
             /// <param name="nullStack"></param>
-            internal MonoBaseWrapper(Stack<int> nullStack)
+            public MonoBaseWrapper(Stack<int> nullStack)
             {
                 Type = WrapperType.Null;
                 MonoBase = null;
                 _nullStack = nullStack;
             }
 
-            internal WrapperType Type;
-            internal T MonoBase;
+            public WrapperType Type;
+            public T MonoBase;
             private readonly Stack<int> _nullStack;
 
 
             /// <summary>
             /// 绑定新的<see cref="MonoBase"/>
             /// </summary>
-            /// <param name="monoBase"></param>
-            internal void SetMonoBase(T monoBase)
+            public void SetMonoBase(T monoBase, bool enable)
             {
-                Type = monoBase.IsEnable ? WrapperType.Enable : WrapperType.Disable;
+                Type = enable ? WrapperType.Enable : WrapperType.Disable;
                 MonoBase = monoBase;
             }
 
-            internal void Enable()
+            public void Enable()
             {
                 // 启动
                 Type = WrapperType.Enable;
             }
 
-            internal void Disable()
+            public void Disable()
             {
                 // 关闭
                 Type = WrapperType.Disable;
             }
 
-            internal void Destroy(int index)
+            public void Destroy(int index)
             {
                 // 将空位添加带栈中
                 _nullStack.Push(index);
@@ -62,7 +61,7 @@ namespace YuzeToolkit.Utility
             }
         }
 
-        internal struct Comparer : IComparer<MonoBaseWrapperList<T>>
+        public struct Comparer : IComparer<MonoBaseWrapperList<T>>
         {
             public int Compare(MonoBaseWrapperList<T> x, MonoBaseWrapperList<T> y)
             {
@@ -72,37 +71,36 @@ namespace YuzeToolkit.Utility
             }
         }
 
-        internal MonoBaseWrapperList(int priority, int capacity)
+        public MonoBaseWrapperList(int priority, int capacity)
         {
             _priority = priority;
             Wrappers = new List<MonoBaseWrapper>(capacity);
             _nullStack = new Stack<int>();
         }
 
-        internal MonoBaseWrapperList(int priority)
+        public MonoBaseWrapperList(int priority)
         {
             _priority = priority;
             Wrappers = null;
             _nullStack = null;
         }
 
-        internal readonly List<MonoBaseWrapper> Wrappers;
+        public readonly List<MonoBaseWrapper> Wrappers;
         private readonly int _priority;
         private readonly Stack<int> _nullStack;
 
         /// <summary>
         /// 当前正在使用的<see cref="MonoBaseWrapper"/>数量
         /// </summary>
-        internal int Count => Wrappers.Count - _nullStack.Count;
+        public int Count => Wrappers.Count - _nullStack.Count;
 
         /// <summary>
         /// 添加函数, 用于向更新队列中添加元素
         /// </summary>
-        /// <param name="monoBase"></param>
-        internal int Add(T monoBase)
+        public int Add(T monoBase, bool enable)
         {
             var wrapper = new MonoBaseWrapper(_nullStack);
-            wrapper.SetMonoBase(monoBase);
+            wrapper.SetMonoBase(monoBase, enable);
             if (_nullStack.Count > 0)
             {
                 var index = _nullStack.Pop();

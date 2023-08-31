@@ -23,22 +23,22 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 内部添加到对应具体更新节点的方法
         /// </summary>
-        /// <param name="monoBase"></param>
-        internal void AddMonoBase(IMonoBase monoBase)
+        /// <param name="lifeCycle"></param>
+        internal void AddMonoBase(ILifeCycle lifeCycle)
         {
-            if (monoBase is IMonoOnUpdate monoOnUpdate)
+            if (lifeCycle is IULifeCycle uLifeCycle)
             {
-                _updateToAdd.Add(monoOnUpdate);
+                _updateToAdd.Add(uLifeCycle);
             }
 
-            if (monoBase is IMonoOnFixedUpdate monoOnFixedUpdate)
+            if (lifeCycle is IFLifeCycle fLifeCycle)
             {
-                _fixedUpdateToAdd.Add(monoOnFixedUpdate);
+                _fixedUpdateToAdd.Add(fLifeCycle);
             }
 
-            if (monoBase is IMonoOnLateUpdate monoOnLateUpdate)
+            if (lifeCycle is ILLifeCycle lLifeCycle)
             {
-                _lateUpdateToAdd.Add(monoOnLateUpdate);
+                _lateUpdateToAdd.Add(lLifeCycle);
             }
         }
 
@@ -47,29 +47,29 @@ namespace YuzeToolkit.Utility
         /// </summary>
         internal void Initialize()
         {
-            _updateToAdd = new List<IMonoOnUpdate>();
-            _updateWrapperLists = new List<MonoBaseWrapperList<IMonoOnUpdate>>(WrapperListsDefaultCapacity);
+            _updateToAdd = new List<IULifeCycle>();
+            _updateWrapperLists = new List<MonoBaseWrapperList<IUpdate>>(WrapperListsDefaultCapacity);
             _updateWrapperListToRemove = new Stack<int>();
 
-            _fixedUpdateToAdd = new List<IMonoOnFixedUpdate>();
-            _fixedUpdateWrapperLists = new List<MonoBaseWrapperList<IMonoOnFixedUpdate>>(WrapperListsDefaultCapacity);
+            _fixedUpdateToAdd = new List<IFLifeCycle>();
+            _fixedUpdateWrapperLists = new List<MonoBaseWrapperList<IFixedUpdate>>(WrapperListsDefaultCapacity);
             _fixedUpdateWrapperListToRemove = new Stack<int>();
 
-            _lateUpdateToAdd = new List<IMonoOnLateUpdate>();
-            _lateUpdateWrapperLists = new List<MonoBaseWrapperList<IMonoOnLateUpdate>>();
+            _lateUpdateToAdd = new List<ILLifeCycle>();
+            _lateUpdateWrapperLists = new List<MonoBaseWrapperList<ILateUpdate>>();
             _lateUpdateWrapperListToRemove = new Stack<int>();
         }
 
         #region Update
 
         // 初始化参数
-        private List<IMonoOnUpdate> _updateToAdd;
-        private List<MonoBaseWrapperList<IMonoOnUpdate>> _updateWrapperLists;
+        private List<IULifeCycle> _updateToAdd;
+        private List<MonoBaseWrapperList<IUpdate>> _updateWrapperLists;
         private Stack<int> _updateWrapperListToRemove;
-        private MonoBaseWrapperList<IMonoOnUpdate>.Comparer _updateComparer;
+        private MonoBaseWrapperList<IUpdate>.Comparer _updateComparer;
 
         // 缓存参数
-        private List<MonoBaseWrapperList<IMonoOnUpdate>.MonoBaseWrapper> _updateWrappersCache;
+        private List<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> _updateWrappersCache;
 
         private void Update()
         {
@@ -115,24 +115,25 @@ namespace YuzeToolkit.Utility
             _updateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(IMonoOnUpdate monoOnUpdate)
+        private void AddToList(IULifeCycle uLifeCycle)
         {
-            var priority = monoOnUpdate.Priority;
-            var index = _updateWrapperLists.BinarySearch(new MonoBaseWrapperList<IMonoOnUpdate>(priority),
+            var update = uLifeCycle.Update;
+            var priority = update.Priority;
+            var index = _updateWrapperLists.BinarySearch(new MonoBaseWrapperList<IUpdate>(priority),
                 _updateComparer);
 
-            MonoBaseWrapperList<IMonoOnUpdate> wrapperList;
+            MonoBaseWrapperList<IUpdate> wrapperList;
             if (index >= 0)
             {
                 wrapperList = _updateWrapperLists[index];
-                monoOnUpdate.UpdateWrappers = wrapperList.Wrappers;
-                monoOnUpdate.UpdateIndex = wrapperList.Add(monoOnUpdate);
+                uLifeCycle.Wrappers = wrapperList.Wrappers;
+                uLifeCycle.Index = wrapperList.Add(update, uLifeCycle.Enable);
             }
             else
             {
-                wrapperList = new MonoBaseWrapperList<IMonoOnUpdate>(priority, WrapperListDefaultCapacity);
-                monoOnUpdate.UpdateWrappers = wrapperList.Wrappers;
-                monoOnUpdate.UpdateIndex = wrapperList.Add(monoOnUpdate);
+                wrapperList = new MonoBaseWrapperList<IUpdate>(priority, WrapperListDefaultCapacity);
+                uLifeCycle.Wrappers = wrapperList.Wrappers;
+                uLifeCycle.Index = wrapperList.Add(update, uLifeCycle.Enable);
                 _updateWrapperLists.Insert(~index, wrapperList);
             }
         }
@@ -142,13 +143,13 @@ namespace YuzeToolkit.Utility
         #region FixedUpdate
 
         // 初始化参数
-        private List<IMonoOnFixedUpdate> _fixedUpdateToAdd;
-        private List<MonoBaseWrapperList<IMonoOnFixedUpdate>> _fixedUpdateWrapperLists;
+        private List<IFLifeCycle> _fixedUpdateToAdd;
+        private List<MonoBaseWrapperList<IFixedUpdate>> _fixedUpdateWrapperLists;
         private Stack<int> _fixedUpdateWrapperListToRemove;
-        private MonoBaseWrapperList<IMonoOnFixedUpdate>.Comparer _fixedUpdateComparer;
+        private MonoBaseWrapperList<IFixedUpdate>.Comparer _fixedUpdateComparer;
 
         // 缓存参数
-        private List<MonoBaseWrapperList<IMonoOnFixedUpdate>.MonoBaseWrapper> _fixedUpdateWrappersCache;
+        private List<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> _fixedUpdateWrappersCache;
 
         private void FixedUpdate()
         {
@@ -195,24 +196,25 @@ namespace YuzeToolkit.Utility
             _fixedUpdateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(IMonoOnFixedUpdate monoOnFixedUpdate)
+        private void AddToList(IFLifeCycle fLifeCycle)
         {
-            var priority = monoOnFixedUpdate.Priority;
-            var index = _fixedUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<IMonoOnFixedUpdate>(priority),
+            var fixedUpdate = fLifeCycle.FixedUpdate;
+            var priority = fixedUpdate.Priority;
+            var index = _fixedUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<IFixedUpdate>(priority),
                 _fixedUpdateComparer);
 
-            MonoBaseWrapperList<IMonoOnFixedUpdate> wrapperList;
+            MonoBaseWrapperList<IFixedUpdate> wrapperList;
             if (index >= 0)
             {
                 wrapperList = _fixedUpdateWrapperLists[index];
-                monoOnFixedUpdate.FixedUpdateWrappers = wrapperList.Wrappers;
-                monoOnFixedUpdate.FixedUpdateIndex = wrapperList.Add(monoOnFixedUpdate);
+                fLifeCycle.Wrappers = wrapperList.Wrappers;
+                fLifeCycle.Index = wrapperList.Add(fixedUpdate, fLifeCycle.Enable);
             }
             else
             {
-                wrapperList = new MonoBaseWrapperList<IMonoOnFixedUpdate>(priority, WrapperListDefaultCapacity);
-                monoOnFixedUpdate.FixedUpdateWrappers = wrapperList.Wrappers;
-                monoOnFixedUpdate.FixedUpdateIndex = wrapperList.Add(monoOnFixedUpdate);
+                wrapperList = new MonoBaseWrapperList<IFixedUpdate>(priority, WrapperListDefaultCapacity);
+                fLifeCycle.Wrappers = wrapperList.Wrappers;
+                fLifeCycle.Index = wrapperList.Add(fixedUpdate, fLifeCycle.Enable);
                 _fixedUpdateWrapperLists.Insert(~index, wrapperList);
             }
         }
@@ -222,14 +224,14 @@ namespace YuzeToolkit.Utility
         #region LateUpdate
 
         // 初始化参数
-        private List<IMonoOnLateUpdate> _lateUpdateToAdd;
-        private List<MonoBaseWrapperList<IMonoOnLateUpdate>> _lateUpdateWrapperLists;
+        private List<ILLifeCycle> _lateUpdateToAdd;
+        private List<MonoBaseWrapperList<ILateUpdate>> _lateUpdateWrapperLists;
         private Stack<int> _lateUpdateWrapperListToRemove;
-        private MonoBaseWrapperList<IMonoOnLateUpdate>.Comparer _lateUpdateComparer;
+        private MonoBaseWrapperList<ILateUpdate>.Comparer _lateUpdateComparer;
 
 
         // 缓存参数
-        private List<MonoBaseWrapperList<IMonoOnLateUpdate>.MonoBaseWrapper> _lateUpdateWrappersCache;
+        private List<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> _lateUpdateWrappersCache;
 
         public void LateUpdate()
         {
@@ -276,24 +278,25 @@ namespace YuzeToolkit.Utility
             _lateUpdateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(IMonoOnLateUpdate monoOnLateUpdate)
+        private void AddToList(ILLifeCycle lLifeCycle)
         {
-            var priority = monoOnLateUpdate.Priority;
-            var index = _lateUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<IMonoOnLateUpdate>(priority),
+            var lateUpdate = lLifeCycle.LateUpdate;
+            var priority = lateUpdate.Priority;
+            var index = _lateUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<ILateUpdate>(priority),
                 _lateUpdateComparer);
 
-            MonoBaseWrapperList<IMonoOnLateUpdate> wrapperList;
+            MonoBaseWrapperList<ILateUpdate> wrapperList;
             if (index >= 0)
             {
                 wrapperList = _lateUpdateWrapperLists[index];
-                monoOnLateUpdate.LateUpdateWrappers = wrapperList.Wrappers;
-                monoOnLateUpdate.LateUpdateIndex = wrapperList.Add(monoOnLateUpdate);
+                lLifeCycle.Wrappers = wrapperList.Wrappers;
+                lLifeCycle.Index = wrapperList.Add(lateUpdate,lLifeCycle.Enable);
             }
             else
             {
-                wrapperList = new MonoBaseWrapperList<IMonoOnLateUpdate>(priority, WrapperListDefaultCapacity);
-                monoOnLateUpdate.LateUpdateWrappers = wrapperList.Wrappers;
-                monoOnLateUpdate.LateUpdateIndex = wrapperList.Add(monoOnLateUpdate);
+                wrapperList = new MonoBaseWrapperList<ILateUpdate>(priority, WrapperListDefaultCapacity);
+                lLifeCycle.Wrappers = wrapperList.Wrappers;
+                lLifeCycle.Index = wrapperList.Add(lateUpdate,lLifeCycle.Enable);
                 _lateUpdateWrapperLists.Insert(~index, wrapperList);
             }
         }

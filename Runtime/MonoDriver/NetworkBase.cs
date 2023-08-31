@@ -1,12 +1,11 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
 
 namespace YuzeToolkit.Utility
 {
-    /// <summary>
-    /// 由<see cref="MonoDriverBase"/>驱动更新的<see cref="MonoBehaviour"/><br/>
-    /// 可以设置更新优先级<see cref="IMonoBase.Priority"/>和在unity中的更新优先级<see cref="IMonoBase.Type"/>
-    /// </summary>
-    public abstract class MonoBase : MonoLogBase, IMonoBase
+    public class NetworkBase : NetworkLogBase, IMonoBase
     {
         public float DeltaTime => MonoDriverBase.DeltaTime;
         public float FixedDeltaTime => MonoDriverBase.FixedDeltaTime;
@@ -15,10 +14,10 @@ namespace YuzeToolkit.Utility
 
         #region UnityLifeCycle
 
-        protected sealed override void Awake()
+        protected override void Awake()
         {
             base.Awake();
-            _lifeCycle = MonoDriverManager.RunLifeCycle(this, false);
+            _lifeCycle = MonoDriverManager.RunLifeCycle(this);
             DoOnAwake();
         }
 
@@ -34,10 +33,11 @@ namespace YuzeToolkit.Utility
             DoOnDisable();
         }
 
-        protected void OnDestroy()
+        public override void OnDestroy()
         {
             _lifeCycle.Dispose();
             DoOnDestroy();
+            base.OnDestroy();
         }
 
         #endregion

@@ -11,27 +11,18 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 更新类型, 在不同Unity的更新顺序中更新
         /// </summary>
-        OrderType Type { get; }
+        OrderType Type => OrderType.After;
 
         /// <summary>
         /// 更新优先级, 越小越早更新
         /// </summary>
-        int Priority { get; }
-        
-        internal IList<MonoBaseWrapperList<IMonoOnUpdate>.MonoBaseWrapper> UpdateWrappers { set; }
-        internal int UpdateIndex{ set; }
-        internal IList<MonoBaseWrapperList<IMonoOnFixedUpdate>.MonoBaseWrapper> FixedUpdateWrappers{ set; }
-        internal int FixedUpdateIndex{ set; }
-        internal IList<MonoBaseWrapperList<IMonoOnLateUpdate>.MonoBaseWrapper> LateUpdateWrappers{  set; }
-        internal int LateUpdateIndex{  set; }
-        
-        internal bool IsEnable { get; }
+        int Priority => 0;
     }
 
     /// <summary>
     /// 绑定基于<see cref="MonoDriverBase"/>驱动更新的<see cref="MonoDriverBase.Update"/>函数
     /// </summary>
-    public interface IMonoOnUpdate : IMonoBase
+    public interface IUpdate : IMonoBase
     {
         /// <summary>
         /// 在<see cref="MonoDriverBase.Update"/>更新的函数
@@ -42,7 +33,7 @@ namespace YuzeToolkit.Utility
     /// <summary>
     /// 绑定基于<see cref="MonoDriverBase"/>驱动更新的<see cref="MonoDriverBase.FixedUpdate"/>函数
     /// </summary>
-    public interface IMonoOnFixedUpdate : IMonoBase
+    public interface IFixedUpdate : IMonoBase
     {
         /// <summary>
         /// 在<see cref="MonoDriverBase.FixedUpdate"/>更新的函数
@@ -53,7 +44,7 @@ namespace YuzeToolkit.Utility
     /// <summary>
     /// 绑定基于<see cref="MonoDriverBase"/>驱动更新的<see cref="MonoDriverBase.LateUpdate"/>函数
     /// </summary>
-    public interface IMonoOnLateUpdate : IMonoBase
+    public interface ILateUpdate : IMonoBase
     {
         /// <summary>
         /// 在<see cref="MonoDriverBase.LateUpdate"/>更新的函数
