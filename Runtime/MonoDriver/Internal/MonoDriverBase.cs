@@ -23,20 +23,20 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 内部添加到对应具体更新节点的方法
         /// </summary>
-        /// <param name="lifeCycle"></param>
-        internal void AddMonoBase(ILifeCycle lifeCycle)
+        /// <param name="disposable"></param>
+        internal void AddMonoBase(IDisposable disposable)
         {
-            if (lifeCycle is IULifeCycle uLifeCycle)
+            if (disposable is IUpdateCycle uLifeCycle)
             {
                 _updateToAdd.Add(uLifeCycle);
             }
 
-            if (lifeCycle is IFLifeCycle fLifeCycle)
+            if (disposable is IFixedUpdateCycle fLifeCycle)
             {
                 _fixedUpdateToAdd.Add(fLifeCycle);
             }
 
-            if (lifeCycle is ILLifeCycle lLifeCycle)
+            if (disposable is ILateUpdateCycle lLifeCycle)
             {
                 _lateUpdateToAdd.Add(lLifeCycle);
             }
@@ -47,15 +47,15 @@ namespace YuzeToolkit.Utility
         /// </summary>
         internal void Initialize()
         {
-            _updateToAdd = new List<IULifeCycle>();
+            _updateToAdd = new List<IUpdateCycle>();
             _updateWrapperLists = new List<MonoBaseWrapperList<IUpdate>>(WrapperListsDefaultCapacity);
             _updateWrapperListToRemove = new Stack<int>();
 
-            _fixedUpdateToAdd = new List<IFLifeCycle>();
+            _fixedUpdateToAdd = new List<IFixedUpdateCycle>();
             _fixedUpdateWrapperLists = new List<MonoBaseWrapperList<IFixedUpdate>>(WrapperListsDefaultCapacity);
             _fixedUpdateWrapperListToRemove = new Stack<int>();
 
-            _lateUpdateToAdd = new List<ILLifeCycle>();
+            _lateUpdateToAdd = new List<ILateUpdateCycle>();
             _lateUpdateWrapperLists = new List<MonoBaseWrapperList<ILateUpdate>>();
             _lateUpdateWrapperListToRemove = new Stack<int>();
         }
@@ -63,7 +63,7 @@ namespace YuzeToolkit.Utility
         #region Update
 
         // 初始化参数
-        private List<IULifeCycle> _updateToAdd;
+        private List<IUpdateCycle> _updateToAdd;
         private List<MonoBaseWrapperList<IUpdate>> _updateWrapperLists;
         private Stack<int> _updateWrapperListToRemove;
         private MonoBaseWrapperList<IUpdate>.Comparer _updateComparer;
@@ -100,7 +100,7 @@ namespace YuzeToolkit.Utility
                 for (var index = 0; index < wrappersCount; index++)
                 {
                     var wrapper = _updateWrappersCache[index];
-                    if (wrapper.Type != WrapperType.Enable) continue;
+                    if (wrapper.IsNull) continue;
                     wrapper.MonoBase.OnUpdate();
                 }
             }
@@ -115,9 +115,9 @@ namespace YuzeToolkit.Utility
             _updateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(IULifeCycle uLifeCycle)
+        private void AddToList(IUpdateCycle updateCycle)
         {
-            var update = uLifeCycle.Update;
+            var update = updateCycle.Update;
             var priority = update.Priority;
             var index = _updateWrapperLists.BinarySearch(new MonoBaseWrapperList<IUpdate>(priority),
                 _updateComparer);
@@ -126,14 +126,14 @@ namespace YuzeToolkit.Utility
             if (index >= 0)
             {
                 wrapperList = _updateWrapperLists[index];
-                uLifeCycle.Wrappers = wrapperList.Wrappers;
-                uLifeCycle.Index = wrapperList.Add(update, uLifeCycle.Enable);
+                updateCycle.Wrappers = wrapperList.Wrappers;
+                updateCycle.Index = wrapperList.Add(update);
             }
             else
             {
                 wrapperList = new MonoBaseWrapperList<IUpdate>(priority, WrapperListDefaultCapacity);
-                uLifeCycle.Wrappers = wrapperList.Wrappers;
-                uLifeCycle.Index = wrapperList.Add(update, uLifeCycle.Enable);
+                updateCycle.Wrappers = wrapperList.Wrappers;
+                updateCycle.Index = wrapperList.Add(update);
                 _updateWrapperLists.Insert(~index, wrapperList);
             }
         }
@@ -143,7 +143,7 @@ namespace YuzeToolkit.Utility
         #region FixedUpdate
 
         // 初始化参数
-        private List<IFLifeCycle> _fixedUpdateToAdd;
+        private List<IFixedUpdateCycle> _fixedUpdateToAdd;
         private List<MonoBaseWrapperList<IFixedUpdate>> _fixedUpdateWrapperLists;
         private Stack<int> _fixedUpdateWrapperListToRemove;
         private MonoBaseWrapperList<IFixedUpdate>.Comparer _fixedUpdateComparer;
@@ -180,7 +180,7 @@ namespace YuzeToolkit.Utility
                 for (var index = 0; index < wrappersCount; index++)
                 {
                     var wrapper = _fixedUpdateWrappersCache[index];
-                    if (wrapper.Type != WrapperType.Enable) continue;
+                    if (wrapper.IsNull) continue;
 
                     wrapper.MonoBase.OnFixedUpdate();
                 }
@@ -196,9 +196,9 @@ namespace YuzeToolkit.Utility
             _fixedUpdateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(IFLifeCycle fLifeCycle)
+        private void AddToList(IFixedUpdateCycle fixedUpdateCycle)
         {
-            var fixedUpdate = fLifeCycle.FixedUpdate;
+            var fixedUpdate = fixedUpdateCycle.FixedUpdate;
             var priority = fixedUpdate.Priority;
             var index = _fixedUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<IFixedUpdate>(priority),
                 _fixedUpdateComparer);
@@ -207,14 +207,14 @@ namespace YuzeToolkit.Utility
             if (index >= 0)
             {
                 wrapperList = _fixedUpdateWrapperLists[index];
-                fLifeCycle.Wrappers = wrapperList.Wrappers;
-                fLifeCycle.Index = wrapperList.Add(fixedUpdate, fLifeCycle.Enable);
+                fixedUpdateCycle.Wrappers = wrapperList.Wrappers;
+                fixedUpdateCycle.Index = wrapperList.Add(fixedUpdate);
             }
             else
             {
                 wrapperList = new MonoBaseWrapperList<IFixedUpdate>(priority, WrapperListDefaultCapacity);
-                fLifeCycle.Wrappers = wrapperList.Wrappers;
-                fLifeCycle.Index = wrapperList.Add(fixedUpdate, fLifeCycle.Enable);
+                fixedUpdateCycle.Wrappers = wrapperList.Wrappers;
+                fixedUpdateCycle.Index = wrapperList.Add(fixedUpdate);
                 _fixedUpdateWrapperLists.Insert(~index, wrapperList);
             }
         }
@@ -224,7 +224,7 @@ namespace YuzeToolkit.Utility
         #region LateUpdate
 
         // 初始化参数
-        private List<ILLifeCycle> _lateUpdateToAdd;
+        private List<ILateUpdateCycle> _lateUpdateToAdd;
         private List<MonoBaseWrapperList<ILateUpdate>> _lateUpdateWrapperLists;
         private Stack<int> _lateUpdateWrapperListToRemove;
         private MonoBaseWrapperList<ILateUpdate>.Comparer _lateUpdateComparer;
@@ -262,7 +262,7 @@ namespace YuzeToolkit.Utility
                 for (var index = 0; index < wrappersCount; index++)
                 {
                     var wrapper = _lateUpdateWrappersCache[index];
-                    if (wrapper.Type != WrapperType.Enable) continue;
+                    if (wrapper.IsNull) continue;
 
                     wrapper.MonoBase.OnLateUpdate();
                 }
@@ -278,9 +278,9 @@ namespace YuzeToolkit.Utility
             _lateUpdateWrapperListToRemove.Clear();
         }
 
-        private void AddToList(ILLifeCycle lLifeCycle)
+        private void AddToList(ILateUpdateCycle lateUpdateCycle)
         {
-            var lateUpdate = lLifeCycle.LateUpdate;
+            var lateUpdate = lateUpdateCycle.LateUpdate;
             var priority = lateUpdate.Priority;
             var index = _lateUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<ILateUpdate>(priority),
                 _lateUpdateComparer);
@@ -289,14 +289,14 @@ namespace YuzeToolkit.Utility
             if (index >= 0)
             {
                 wrapperList = _lateUpdateWrapperLists[index];
-                lLifeCycle.Wrappers = wrapperList.Wrappers;
-                lLifeCycle.Index = wrapperList.Add(lateUpdate,lLifeCycle.Enable);
+                lateUpdateCycle.Wrappers = wrapperList.Wrappers;
+                lateUpdateCycle.Index = wrapperList.Add(lateUpdate);
             }
             else
             {
                 wrapperList = new MonoBaseWrapperList<ILateUpdate>(priority, WrapperListDefaultCapacity);
-                lLifeCycle.Wrappers = wrapperList.Wrappers;
-                lLifeCycle.Index = wrapperList.Add(lateUpdate,lLifeCycle.Enable);
+                lateUpdateCycle.Wrappers = wrapperList.Wrappers;
+                lateUpdateCycle.Index = wrapperList.Add(lateUpdate);
                 _lateUpdateWrapperLists.Insert(~index, wrapperList);
             }
         }

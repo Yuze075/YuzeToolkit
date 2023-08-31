@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace YuzeToolkit.Utility
@@ -9,7 +10,7 @@ namespace YuzeToolkit.Utility
     internal readonly struct MonoBaseWrapperList<T> where T : class, IMonoBase
     {
         /// <summary>
-        /// 用于封装<see cref="MonoBase"/>的结构体, 记录自身<see cref="WrapperType"/>
+        /// 用于封装<see cref="MonoBase"/>的结构体
         /// </summary>
         public struct MonoBaseWrapper
         {
@@ -19,12 +20,12 @@ namespace YuzeToolkit.Utility
             /// <param name="nullStack"></param>
             public MonoBaseWrapper(Stack<int> nullStack)
             {
-                Type = WrapperType.Null;
+                IsNull = true;
                 MonoBase = null;
                 _nullStack = nullStack;
             }
 
-            public WrapperType Type;
+            public bool IsNull;
             public T MonoBase;
             private readonly Stack<int> _nullStack;
 
@@ -32,32 +33,20 @@ namespace YuzeToolkit.Utility
             /// <summary>
             /// 绑定新的<see cref="MonoBase"/>
             /// </summary>
-            public void SetMonoBase(T monoBase, bool enable)
+            public void SetMonoBase(T monoBase)
             {
-                Type = enable ? WrapperType.Enable : WrapperType.Disable;
+                IsNull = false;
                 MonoBase = monoBase;
             }
 
-            public void Enable()
-            {
-                // 启动
-                Type = WrapperType.Enable;
-            }
-
-            public void Disable()
-            {
-                // 关闭
-                Type = WrapperType.Disable;
-            }
-
-            public void Destroy(int index)
+            public void Dispose(int index)
             {
                 // 将空位添加带栈中
                 _nullStack.Push(index);
 
                 // 重设参数
                 MonoBase = null;
-                Type = WrapperType.Null;
+                IsNull = true;
             }
         }
 
@@ -97,10 +86,10 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 添加函数, 用于向更新队列中添加元素
         /// </summary>
-        public int Add(T monoBase, bool enable)
+        public int Add(T monoBase)
         {
             var wrapper = new MonoBaseWrapper(_nullStack);
-            wrapper.SetMonoBase(monoBase, enable);
+            wrapper.SetMonoBase(monoBase);
             if (_nullStack.Count > 0)
             {
                 var index = _nullStack.Pop();

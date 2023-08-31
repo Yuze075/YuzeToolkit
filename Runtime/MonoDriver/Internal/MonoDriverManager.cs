@@ -7,22 +7,17 @@ namespace YuzeToolkit.Utility
     /// <see cref="MonoDriverBase"/>的管理器, 用于处理不同的更新逻辑的默认初始化
     /// </summary>
     [RequireComponent(typeof(AfterMonoDriver), typeof(BeforeMonoDriver), typeof(EndMonoDriver))]
-    public class MonoDriverManager : MonoBehaviour
+    internal class MonoDriverManager : MonoBehaviour
     {
         #region static
 
         private static bool _sIsInitialize;
         private static MonoDriverManager _sMonoDriverManager;
 
-        public static ILifeCycle RunLifeCycle(IMonoBase monoBase, bool enable = true)
+        public static IDisposable Run(IMonoBase monoBase)
         {
             if (!_sIsInitialize) Load();
-            return _sMonoDriverManager.RunLifeCyclePrivate(monoBase, enable);
-        }
-
-        public static IDisposable Run(IMonoBase monoBase, bool enable = true)
-        {
-            return RunLifeCycle(monoBase, enable);
+            return _sMonoDriverManager.RunPrivate(monoBase);
         }
 
         private static void Load()
@@ -119,30 +114,29 @@ namespace YuzeToolkit.Utility
             _end = null;
         }
 
-        private ILifeCycle RunLifeCyclePrivate(IMonoBase monoBase, bool enable)
+        private IDisposable RunPrivate(IMonoBase monoBase)
         {
-            var lifeCycle = LifeCycleBase.Build(monoBase, enable);
-            if (monoBase is null) return null;
-
+            if (monoBase == null) return new NullDisposable();
+            var disposable = LifeCycleBase.Build(monoBase);
             switch (monoBase.Type)
             {
                 case OrderType.First:
-                    _first.AddMonoBase(lifeCycle);
+                    _first.AddMonoBase(disposable);
                     break;
                 case OrderType.Before:
-                    _before.AddMonoBase(lifeCycle);
+                    _before.AddMonoBase(disposable);
                     break;
                 case OrderType.After:
-                    _after.AddMonoBase(lifeCycle);
+                    _after.AddMonoBase(disposable);
                     break;
                 case OrderType.End:
-                    _end.AddMonoBase(lifeCycle);
+                    _end.AddMonoBase(disposable);
                     break;
                 default:
                     throw LogSystem.ThrowException(new ArgumentOutOfRangeException());
             }
 
-            return lifeCycle;
+            return disposable;
         }
     }
 }

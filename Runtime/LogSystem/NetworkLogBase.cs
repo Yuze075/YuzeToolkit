@@ -5,6 +5,8 @@ namespace YuzeToolkit.Utility
 {
     public class NetworkLogBase : NetworkBehaviour
     {
+        private bool _isInit;
+
         /// <summary>
         /// 用于统一管理打印的组, 绑定默认的context(this)和配置默认的打印<see cref="LogTags"/>
         /// </summary>
@@ -22,6 +24,12 @@ namespace YuzeToolkit.Utility
         /// <param name="tags">打印时额外附加的Tag</param>
         protected void Log(object message, LogType logType = LogType.Log, string[] tags = null)
         {
+            if (!_isInit)
+            {
+                _isInit = true;
+                LogGroup = new LogGroup(LogTags, this);
+            }
+
             LogGroup.Log(message, tags, logType);
         }
 
@@ -35,6 +43,12 @@ namespace YuzeToolkit.Utility
         /// <returns></returns>
         protected Exception ThrowException(Exception exception, string[] tags = null)
         {
+            if (!_isInit)
+            {
+                _isInit = true;
+                LogGroup = new LogGroup(LogTags, this);
+            }
+
             return LogGroup.ThrowException(exception, tags);
         }
 

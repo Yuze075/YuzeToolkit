@@ -1,309 +1,195 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace YuzeToolkit.Utility
 {
-    internal abstract class LifeCycleBase : ILifeCycle
+    internal abstract class LifeCycleBase : IDisposable
     {
-        private LifeCycleBase(IMonoBase monoBase, bool enable)
-        {
-            MonoBase = monoBase;
-            _enable = enable;
-        }
-
-        private bool _enable;
-
-        public bool Enable
-        {
-            get => _enable;
-            set
-            {
-                if (value == _enable) return;
-                _enable = value;
-                if (_enable) OnEnable(this);
-                else OnDisable(this);
-            }
-        }
-
-        public IMonoBase MonoBase { get; private set; }
-
         public void Dispose()
         {
-            OnDestroy(this);
-            MonoBase = null;
+            if (this is IUpdateCycle uLifeCycle) OnDispose(uLifeCycle);
+            if (this is IFixedUpdateCycle fLifeCycle) OnDispose(fLifeCycle);
+            if (this is ILateUpdateCycle lLifeCycle) OnDispose(lLifeCycle);
         }
 
         [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
-        public static ILifeCycle Build(IMonoBase monoBase, bool enable)
+        public static IDisposable Build(IMonoBase monoBase)
         {
             return monoBase switch
             {
-                IUpdate and IFixedUpdate and ILateUpdate => new UflLifeCycle(monoBase,enable),
-                IUpdate and IFixedUpdate => new UfLifeCycle(monoBase,enable),
-                IUpdate and ILateUpdate => new UlLifeCycle(monoBase,enable),
-                IFixedUpdate and ILateUpdate => new FlLifeCycle(monoBase,enable),
-                IUpdate => new ULifeCycle(monoBase,enable),
-                IFixedUpdate => new FLifeCycle(monoBase,enable),
-                ILateUpdate => new LLifeCycle(monoBase,enable),
-                _ => new NullLifeCycle(monoBase,enable)
+                IUpdate and IFixedUpdate and ILateUpdate => new UFLCycle(monoBase),
+                IUpdate and IFixedUpdate => new UFCycle(monoBase),
+                IUpdate and ILateUpdate => new ULCycle(monoBase),
+                IFixedUpdate and ILateUpdate => new FLCycle(monoBase),
+                IUpdate => new UCycle(monoBase),
+                IFixedUpdate => new FCycle(monoBase),
+                ILateUpdate => new LCycle(monoBase),
+                _ => new NullDisposable()
             };
         }
 
         #region LifeCycle
 
-        private static void OnEnable(ILifeCycle lifeCycle)
+        private static void OnDispose(IUpdateCycle updateCycle)
         {
-            if (lifeCycle is IULifeCycle uLifeCycle) UOnEnable(uLifeCycle);
-            if (lifeCycle is IFLifeCycle fLifeCycle) FOnEnable(fLifeCycle);
-            if (lifeCycle is ILLifeCycle lLifeCycle) LOnEnable(lLifeCycle);
-        }
-
-        private static void OnDisable(ILifeCycle lifeCycle)
-        {
-            if (lifeCycle is IULifeCycle uLifeCycle) UOnDisable(uLifeCycle);
-            if (lifeCycle is IFLifeCycle fLifeCycle) FOnDisable(fLifeCycle);
-            if (lifeCycle is ILLifeCycle lLifeCycle) LOnDisable(lLifeCycle);
-        }
-
-        private static void OnDestroy(ILifeCycle lifeCycle)
-        {
-            if (lifeCycle is IULifeCycle uLifeCycle) UOnDestroy(uLifeCycle);
-            if (lifeCycle is IFLifeCycle fLifeCycle) FOnDestroy(fLifeCycle);
-            if (lifeCycle is ILLifeCycle lLifeCycle) LOnDestroy(lLifeCycle);
-        }
-
-        private static void UOnEnable(IULifeCycle uLifeCycle)
-        {
-            var index = uLifeCycle.Index;
+            var index = updateCycle.Index;
             if (index == -1) return;
 
-            var list = uLifeCycle.Wrappers;
+            var list = updateCycle.Wrappers;
             var wrapper = list[index];
-            wrapper.Enable();
+            wrapper.Dispose(index);
             list[index] = wrapper;
+
+            updateCycle.Wrappers = null;
+            updateCycle.Index = -1;
+            updateCycle.Update = null;
         }
 
-        private static void FOnEnable(IFLifeCycle fLifeCycle)
+        private static void OnDispose(IFixedUpdateCycle fixedUpdateCycle)
         {
-            var index = fLifeCycle.Index;
+            var index = fixedUpdateCycle.Index;
             if (index == -1) return;
 
-            var list = fLifeCycle.Wrappers;
+            var list = fixedUpdateCycle.Wrappers;
             var wrapper = list[index];
-            wrapper.Enable();
+            wrapper.Dispose(index);
             list[index] = wrapper;
+
+            fixedUpdateCycle.Wrappers = null;
+            fixedUpdateCycle.Index = -1;
+            fixedUpdateCycle.FixedUpdate = null;
         }
 
-        private static void LOnEnable(ILLifeCycle lLifeCycle)
+        private static void OnDispose(ILateUpdateCycle lateUpdateCycle)
         {
-            var index = lLifeCycle.Index;
+            var index = lateUpdateCycle.Index;
             if (index == -1) return;
 
-            var list = lLifeCycle.Wrappers;
+            var list = lateUpdateCycle.Wrappers;
             var wrapper = list[index];
-            wrapper.Enable();
-            list[index] = wrapper;
-        }
-
-        private static void UOnDisable(IULifeCycle uLifeCycle)
-        {
-            var index = uLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = uLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Disable();
-            list[index] = wrapper;
-        }
-
-        private static void FOnDisable(IFLifeCycle fLifeCycle)
-        {
-            var index = fLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = fLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Disable();
-            list[index] = wrapper;
-        }
-
-        private static void LOnDisable(ILLifeCycle lLifeCycle)
-        {
-            var index = lLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = lLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Disable();
-            list[index] = wrapper;
-        }
-
-        private static void UOnDestroy(IULifeCycle uLifeCycle)
-        {
-            var index = uLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = uLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Destroy(index);
+            wrapper.Dispose(index);
             list[index] = wrapper;
 
-            uLifeCycle.Wrappers = null;
-            uLifeCycle.Index = -1;
-            uLifeCycle.Update = null;
-        }
-
-        private static void FOnDestroy(IFLifeCycle fLifeCycle)
-        {
-            var index = fLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = fLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Destroy(index);
-            list[index] = wrapper;
-            
-            fLifeCycle.Wrappers = null;
-            fLifeCycle.Index = -1;
-            fLifeCycle.FixedUpdate = null;
-        }
-
-        private static void LOnDestroy(ILLifeCycle lLifeCycle)
-        {
-            var index = lLifeCycle.Index;
-            if (index == -1) return;
-
-            var list = lLifeCycle.Wrappers;
-            var wrapper = list[index];
-            wrapper.Destroy(index);
-            list[index] = wrapper;
-            
-            lLifeCycle.Wrappers = null;
-            lLifeCycle.Index = -1;
-            lLifeCycle.LateUpdate = null;
+            lateUpdateCycle.Wrappers = null;
+            lateUpdateCycle.Index = -1;
+            lateUpdateCycle.LateUpdate = null;
         }
 
         #endregion
 
         #region LifeCycleClass
-        
-        private class NullLifeCycle : ILifeCycle
-        {
-            public NullLifeCycle(IMonoBase monoBase, bool enable)
-            {
-                MonoBase = monoBase;
-                Enable = enable;
-            }
-            public void Dispose()
-            { }
 
-            public bool Enable { get; set; }
-            public IMonoBase MonoBase { get; }
-        }
-
-        private class ULifeCycle : LifeCycleBase, IULifeCycle
+        private class UCycle : LifeCycleBase, IUpdateCycle
         {
-            public ULifeCycle(IMonoBase monoBase, bool enable) : base(monoBase, enable) =>
+            public UCycle(IMonoBase monoBase) =>
                 Update = (IUpdate)monoBase;
 
-            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IULifeCycle.Wrappers { get; set; }
-            int IULifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IUpdateCycle.Wrappers { get; set; }
+            int IUpdateCycle.Index { get; set; }
             public IUpdate Update { get; set; }
         }
 
-        private class FLifeCycle : LifeCycleBase, IFLifeCycle
+        private class FCycle : LifeCycleBase, IFixedUpdateCycle
         {
-            public FLifeCycle(IMonoBase monoBase, bool enable ) : base(monoBase, enable) =>
+            public FCycle(IMonoBase monoBase) =>
                 FixedUpdate = (IFixedUpdate)monoBase;
 
-            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFLifeCycle.Wrappers { get; set; }
-            int IFLifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFixedUpdateCycle.Wrappers { get; set; }
+            int IFixedUpdateCycle.Index { get; set; }
             public IFixedUpdate FixedUpdate { get; set; }
         }
 
-        private class LLifeCycle : LifeCycleBase, ILLifeCycle
+        private class LCycle : LifeCycleBase, ILateUpdateCycle
         {
-            public LLifeCycle(IMonoBase monoBase, bool enable ) : base(monoBase, enable) =>
+            public LCycle(IMonoBase monoBase) =>
                 LateUpdate = (ILateUpdate)monoBase;
 
-            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILLifeCycle.Wrappers { get; set; }
-            int ILLifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILateUpdateCycle.Wrappers { get; set; }
+            int ILateUpdateCycle.Index { get; set; }
             public ILateUpdate LateUpdate { get; set; }
         }
 
-        private class UfLifeCycle : LifeCycleBase, IULifeCycle, IFLifeCycle
+        private class UFCycle : LifeCycleBase, IUpdateCycle, IFixedUpdateCycle
         {
-            public UfLifeCycle(IMonoBase monoBase, bool enable) : base(monoBase, enable)
+            public UFCycle(IMonoBase monoBase)
             {
                 Update = (IUpdate)monoBase;
                 FixedUpdate = (IFixedUpdate)monoBase;
             }
 
-            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IULifeCycle.Wrappers { get; set; }
-            int IULifeCycle.Index { get; set; }
-            public IUpdate Update{ get; set; }
-
-            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFLifeCycle.Wrappers { get; set; }
-            int IFLifeCycle.Index { get; set; }
-            public IFixedUpdate FixedUpdate { get; set; }
-        }
-
-        private class UlLifeCycle : LifeCycleBase, IULifeCycle, ILLifeCycle
-        {
-            public UlLifeCycle(IMonoBase monoBase, bool enable) : base(monoBase, enable)
-            {
-                Update = (IUpdate)monoBase;
-                LateUpdate = (ILateUpdate)monoBase;
-            }
-
-            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IULifeCycle.Wrappers { get; set; }
-            int IULifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IUpdateCycle.Wrappers { get; set; }
+            int IUpdateCycle.Index { get; set; }
             public IUpdate Update { get; set; }
 
-            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILLifeCycle.Wrappers { get; set; }
-            int ILLifeCycle.Index { get; set; }
-            public ILateUpdate LateUpdate{ get; set; }
+            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFixedUpdateCycle.Wrappers { get; set; }
+            int IFixedUpdateCycle.Index { get; set; }
+            public IFixedUpdate FixedUpdate { get; set; }
         }
 
-        private class FlLifeCycle : LifeCycleBase, IFLifeCycle, ILLifeCycle
+        private class ULCycle : LifeCycleBase, IUpdateCycle, ILateUpdateCycle
         {
-            public FlLifeCycle(IMonoBase monoBase, bool enable) : base(monoBase, enable)
+            public ULCycle(IMonoBase monoBase)
+            {
+                Update = (IUpdate)monoBase;
+                LateUpdate = (ILateUpdate)monoBase;
+            }
+
+            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IUpdateCycle.Wrappers { get; set; }
+            int IUpdateCycle.Index { get; set; }
+            public IUpdate Update { get; set; }
+
+            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILateUpdateCycle.Wrappers { get; set; }
+            int ILateUpdateCycle.Index { get; set; }
+            public ILateUpdate LateUpdate { get; set; }
+        }
+
+        private class FLCycle : LifeCycleBase, IFixedUpdateCycle, ILateUpdateCycle
+        {
+            public FLCycle(IMonoBase monoBase)
             {
                 FixedUpdate = (IFixedUpdate)monoBase;
                 LateUpdate = (ILateUpdate)monoBase;
             }
 
-            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFLifeCycle.Wrappers { get; set; }
-            int IFLifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFixedUpdateCycle.Wrappers { get; set; }
+            int IFixedUpdateCycle.Index { get; set; }
             public IFixedUpdate FixedUpdate { get; set; }
 
-            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILLifeCycle.Wrappers { get; set; }
-            int ILLifeCycle.Index { get; set; }
-            public ILateUpdate LateUpdate{ get; set; }
+            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILateUpdateCycle.Wrappers { get; set; }
+            int ILateUpdateCycle.Index { get; set; }
+            public ILateUpdate LateUpdate { get; set; }
         }
 
-        private class UflLifeCycle : LifeCycleBase, IULifeCycle, IFLifeCycle, ILLifeCycle
+        private class UFLCycle : LifeCycleBase, IUpdateCycle, IFixedUpdateCycle, ILateUpdateCycle
         {
-            public UflLifeCycle(IMonoBase monoBase, bool enable) : base(monoBase, enable)
+            public UFLCycle(IMonoBase monoBase)
             {
                 Update = (IUpdate)monoBase;
                 FixedUpdate = (IFixedUpdate)monoBase;
                 LateUpdate = (ILateUpdate)monoBase;
             }
 
-            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IULifeCycle.Wrappers { get; set; }
-            int IULifeCycle.Index { get; set; }
-            public IUpdate Update{ get; set; }
+            IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper> IUpdateCycle.Wrappers { get; set; }
+            int IUpdateCycle.Index { get; set; }
+            public IUpdate Update { get; set; }
 
-            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFLifeCycle.Wrappers { get; set; }
-            int IFLifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper> IFixedUpdateCycle.Wrappers { get; set; }
+            int IFixedUpdateCycle.Index { get; set; }
             public IFixedUpdate FixedUpdate { get; set; }
 
-            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILLifeCycle.Wrappers { get; set; }
-            int ILLifeCycle.Index { get; set; }
+            IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> ILateUpdateCycle.Wrappers { get; set; }
+            int ILateUpdateCycle.Index { get; set; }
             public ILateUpdate LateUpdate { get; set; }
         }
 
         #endregion
+    }
+
+    internal class NullDisposable : IDisposable
+    {
+        public void Dispose()
+        {
+        }
     }
 }

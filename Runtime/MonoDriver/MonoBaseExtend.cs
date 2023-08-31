@@ -9,21 +9,10 @@ namespace YuzeToolkit.Utility
             return MonoDriverManager.Run(monoBase);
         }
 
-        public static ILifeCycle RunLifeCycle(this IMonoBase monoBase)
-        {
-            return MonoDriverManager.RunLifeCycle(monoBase);
-        }
-
         public static IDisposable Run(this Action action, EUpdateType updateType = EUpdateType.Update, int priority = 0,
             OrderType type = OrderType.After)
         {
-            return RunLifeCycle(action, updateType, priority, type);
-        }
-
-        public static ILifeCycle RunLifeCycle(this Action action, EUpdateType updateType = EUpdateType.Update,
-            int priority = 0, OrderType type = OrderType.After)
-        {
-            return MonoDriverManager.RunLifeCycle(updateType switch
+            return MonoDriverManager.Run(updateType switch
             {
                 EUpdateType.Update => new UpdateWrapper(action, priority, type),
                 EUpdateType.FixedUpdate => new FixedUpdateWrapper(action, priority, type),
