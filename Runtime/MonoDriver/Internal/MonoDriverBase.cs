@@ -15,16 +15,13 @@ namespace YuzeToolkit.Utility
         private const int WrapperListsDefaultCapacity = 64;
         private const int WrapperListDefaultCapacity = 1;
 
-        internal static float DeltaTime;
-        internal static float FixedDeltaTime;
-
         #endregion
 
         /// <summary>
         /// 内部添加到对应具体更新节点的方法
         /// </summary>
         /// <param name="disposable"></param>
-        internal void AddMonoBase(IDisposable disposable)
+        public void AddMonoBase(IDisposable disposable)
         {
             if (disposable is IUpdateCycle uLifeCycle)
             {
@@ -45,7 +42,7 @@ namespace YuzeToolkit.Utility
         /// <summary>
         /// 初始化方法
         /// </summary>
-        internal void Initialize()
+        public void Initialize()
         {
             _updateToAdd = new List<IUpdateCycle>();
             _updateWrapperLists = new List<MonoBaseWrapperList<IUpdate>>(WrapperListsDefaultCapacity);
@@ -82,7 +79,7 @@ namespace YuzeToolkit.Utility
             _updateToAdd.Clear();
 
 
-            DeltaTime = Time.deltaTime;
+            MonoBase.SDeltaTime = Time.deltaTime;
 
             var listsCount = _updateWrapperLists.Count;
             for (var i = 0; i < listsCount; i++)
@@ -162,7 +159,7 @@ namespace YuzeToolkit.Utility
             _fixedUpdateToAdd.Clear();
 
 
-            FixedDeltaTime = Time.fixedDeltaTime;
+            MonoBase.SFixedDeltaTime = Time.fixedDeltaTime;
 
             var listsCount = _fixedUpdateWrapperLists.Count;
             for (var i = 0; i < listsCount; i++)
@@ -233,7 +230,7 @@ namespace YuzeToolkit.Utility
         // 缓存参数
         private List<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper> _lateUpdateWrappersCache;
 
-        public void LateUpdate()
+        private void LateUpdate()
         {
             var addCount = _lateUpdateToAdd.Count;
             for (var index = 0; index < addCount; index++)
@@ -244,7 +241,7 @@ namespace YuzeToolkit.Utility
             _lateUpdateToAdd.Clear();
 
 
-            DeltaTime = Time.deltaTime;
+            MonoBase.SDeltaTime = Time.deltaTime;
 
             var listsCount = _lateUpdateWrapperLists.Count;
             for (var i = 0; i < listsCount; i++)

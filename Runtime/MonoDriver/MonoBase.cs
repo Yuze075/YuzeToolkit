@@ -9,8 +9,10 @@ namespace YuzeToolkit.Utility
     /// </summary>
     public abstract class MonoBase : MonoLogBase, IMonoBase
     {
-        public float DeltaTime => MonoDriverBase.DeltaTime;
-        public float FixedDeltaTime => MonoDriverBase.FixedDeltaTime;
+        public static float SDeltaTime;
+        public static float SFixedDeltaTime;
+        public float DeltaTime => SDeltaTime;
+        public float FixedDeltaTime => SFixedDeltaTime;
 
         private IDisposable _disposable;
 

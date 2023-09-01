@@ -17,7 +17,8 @@ namespace YuzeToolkit.Utility
                 EUpdateType.Update => new UpdateWrapper(action, priority, type),
                 EUpdateType.FixedUpdate => new FixedUpdateWrapper(action, priority, type),
                 EUpdateType.LateUpdate => new LateUpdateWrapper(action, priority, type),
-                _ => throw new ArgumentOutOfRangeException(nameof(updateType), updateType, null)
+                _ => throw LogSystem.ThrowException(new ArgumentOutOfRangeException(nameof(updateType), updateType,
+                    null))
             });
         }
     }

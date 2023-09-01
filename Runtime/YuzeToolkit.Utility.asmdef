@@ -1,9 +1,7 @@
 {
     "name": "YuzeToolkit.Utility",
     "rootNamespace": "",
-    "references": [
-        "GUID:1491147abca9d7d4bb7105af628b223e"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
