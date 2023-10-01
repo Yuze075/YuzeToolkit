@@ -1,14 +1,14 @@
 ﻿using System;
 
-namespace YuzeToolkit.Utility
+namespace YuzeToolkit.MonoDriver
 {
-    internal class UpdateWrapper : IUpdate
+    internal class ActionUpdateWrapper : IUpdate
     {
         private readonly Action _action;
         private readonly int _priority;
         private readonly OrderType _type;
 
-        public UpdateWrapper(Action action, int priority, OrderType type)
+        public ActionUpdateWrapper(Action action, int priority, OrderType type)
         {
             _action = action;
             _priority = priority;
@@ -20,13 +20,13 @@ namespace YuzeToolkit.Utility
         public OrderType Type => _type;
     }
 
-    internal class FixedUpdateWrapper : IFixedUpdate
+    internal class ActionFixedUpdateWrapper : IFixedUpdate
     {
         private readonly Action _action;
         private readonly int _priority;
         private readonly OrderType _type;
 
-        public FixedUpdateWrapper(Action action, int priority, OrderType type)
+        public ActionFixedUpdateWrapper(Action action, int priority, OrderType type)
         {
             _action = action;
             _priority = priority;
@@ -38,13 +38,13 @@ namespace YuzeToolkit.Utility
         public OrderType Type => _type;
     }
 
-    internal class LateUpdateWrapper : ILateUpdate
+    internal class ActionLateUpdateWrapper : ILateUpdate
     {
         private readonly Action _action;
         private readonly int _priority;
         private readonly OrderType _type;
 
-        public LateUpdateWrapper(Action action, int priority, OrderType type)
+        public ActionLateUpdateWrapper(Action action, int priority, OrderType type)
         {
             _action = action;
             _priority = priority;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace YuzeToolkit.Utility
+namespace YuzeToolkit.MonoDriver
 {
     internal abstract class LifeCycleBase : IDisposable
     {
@@ -186,7 +186,7 @@ namespace YuzeToolkit.Utility
         #endregion
     }
 
-    internal class NullDisposable : IDisposable
+    internal struct NullDisposable : IDisposable
     {
         public void Dispose()
         {

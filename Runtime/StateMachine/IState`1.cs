@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.Utility
+﻿using YuzeToolkit.Log;
+namespace YuzeToolkit.StateMachine
 {
     public interface IState<T> : IState where T : IStateMachine
     {
@@ -15,7 +16,7 @@
 
                 if (value != null)
                 {
-                    LogSystem.Warning($"{value.GetType()}: 不是对于的目标类型{typeof(T)}");
+                    LogSys.Warning($"{value.GetType()}: 不是对于的目标类型{typeof(T)}");
                 }
 
                 StateMachine = default;
@@ -32,7 +33,7 @@
 
             if (beforeState != null)
             {
-                LogSystem.Warning($"{beforeState.GetType()}: 不是对于的目标类型{typeof(IState<T>)}");
+                LogSys.Warning($"{beforeState.GetType()}: 不是对于的目标类型{typeof(IState<T>)}");
             }
 
             OnEnter(null);
@@ -54,7 +55,7 @@
 
             if (afterState != null)
             {
-                LogSystem.Warning($"{afterState.GetType()}: 不是对于的目标类型{typeof(IState<T>)}");
+                LogSys.Warning($"{afterState.GetType()}: 不是对于的目标类型{typeof(IState<T>)}");
             }
 
             OnExit(null);

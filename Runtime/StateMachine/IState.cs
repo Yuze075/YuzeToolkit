@@ -1,4 +1,4 @@
-﻿namespace YuzeToolkit.Utility
+﻿namespace YuzeToolkit.StateMachine
 {
     public interface IState
     {

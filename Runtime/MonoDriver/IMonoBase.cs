@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace YuzeToolkit.Utility
+﻿namespace YuzeToolkit.MonoDriver
 {
     /// <summary>
     /// 所有需要<see cref="MonoDriverBase"/>统一更新函数的接口
     /// </summary>
     public interface IMonoBase
     {
+        public static float S_DeltaTime;
+        public static float S_FixedDeltaTime;
+
         /// <summary>
         /// 更新类型, 在不同Unity的更新顺序中更新
         /// </summary>

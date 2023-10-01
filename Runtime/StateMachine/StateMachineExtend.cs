@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using YuzeToolkit.Log;
 
-
-namespace YuzeToolkit.Utility
+namespace YuzeToolkit.StateMachine
 {
     public static class StateMachineExtend
     {
@@ -16,7 +16,7 @@ namespace YuzeToolkit.Utility
             }
             else
             {
-                LogSystem.Warning($"{addState.GetType()}: 已经存在在状态机中了");
+                LogSys.Warning($"{addState.GetType()}: 已经存在在状态机中了");
             }
         }
 
@@ -24,14 +24,14 @@ namespace YuzeToolkit.Utility
         {
             if (stateMachine.States == null)
             {
-                LogSystem.Warning($"{stateMachine.GetType()}: States字典为空");
+                LogSys.Warning($"{stateMachine.GetType()}: States字典为空");
                 return;
             }
 
             var changeStateType = typeof(TChangeState);
             if (!stateMachine.States.TryGetValue(changeStateType, out var afterState))
             {
-                LogSystem.Warning($"{changeStateType}: 无法找到对应类型的对象");
+                LogSys.Warning($"{changeStateType}: 无法找到对应类型的对象");
                 return;
             }
 
@@ -47,13 +47,13 @@ namespace YuzeToolkit.Utility
             
             if (stateMachine.States == null)
             {
-                LogSystem.Warning($"{stateMachine.GetType()}: States字典为空");
+                LogSys.Warning($"{stateMachine.GetType()}: States字典为空");
                 return;
             }
 
             if (!stateMachine.States.TryGetValue(typeof(TRunState), out var iState))
             {
-                LogSystem.Warning($"{typeof(TRunState)}: 无法找到对应类型的对象");
+                LogSys.Warning($"{typeof(TRunState)}: 无法找到对应类型的对象");
                 return;
             }
 

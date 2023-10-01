@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace YuzeToolkit.Utility
+namespace YuzeToolkit.StateMachine
 {
     /// <summary>
     /// 状态机接口
