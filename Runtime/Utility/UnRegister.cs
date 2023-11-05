@@ -1,17 +1,18 @@
 ﻿using System;
 
-namespace YuzeToolkit.Utility
+namespace YuzeToolkit
 {
-    public struct UnRegister : IDisposable
+    public class UnRegister : IDisposable
     {
-        private Action _action;
+        private Action? _disposeAction;
 
-        public UnRegister(Action action) => _action = action;
+        public UnRegister(Action? disposeAction) => _disposeAction = disposeAction;
+        public UnRegister(IDisposable? disposable) => _disposeAction = disposable != null ? disposable.Dispose : null;
 
         public void Dispose()
         {
-            _action?.Invoke();
-            _action = null;
+            _disposeAction?.Invoke();
+            _disposeAction = null;
         }
     }
 }

@@ -1,14 +1,28 @@
 {
-  "name": "YuzeToolkit",
-  "rootNamespace": "",
-  "references": [],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name": "YuzeToolkit",
+    "rootNamespace": "YuzeToolkit",
+    "references": [
+        "Toolbox",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "0.0.0",
+            "define": "USE_UNITASK"
+        },
+        {
+            "name": "com.browar.editor-toolbox",
+            "expression": "0.0.0",
+            "define": "USE_EDITOR_TOOLBOX"
+        }
+    ],
+    "noEngineReferences": false
 }
