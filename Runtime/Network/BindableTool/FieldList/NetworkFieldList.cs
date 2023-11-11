@@ -12,19 +12,18 @@ namespace YuzeToolkit.Network.BindableTool
     public class NetworkFieldList<TValue> : NetworkList<TValue>, IFieldList<TValue>
         where TValue : unmanaged, IEquatable<TValue>
     {
-        public NetworkFieldList(ILogTool parent = null!,
+        public NetworkFieldList(
             NetworkVariableReadPermission readPerm = NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission writePerm = NetworkVariableWritePermission.Server) :
-            this(default!, parent, readPerm, writePerm)
+            this(default!, readPerm, writePerm)
         {
         }
 
-        public NetworkFieldList(IEnumerable<TValue> enumerable, ILogTool parent = null!,
+        public NetworkFieldList(IEnumerable<TValue> enumerable,
             NetworkVariableReadPermission readPerm = NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission writePerm = NetworkVariableWritePermission.Server) :
             base(enumerable, readPerm, writePerm)
         {
-            LogTool.Parent = parent;
             OnListChanged += @event =>
             {
                 switch (@event.Type)
@@ -54,14 +53,14 @@ namespace YuzeToolkit.Network.BindableTool
         }
 
         private SLogTool? _sLogTool;
-
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IBindable),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         public void CopyTo(TValue[] array, int arrayIndex) => throw new NotImplementedException();
         public bool IsReadOnly => true;
@@ -77,7 +76,7 @@ namespace YuzeToolkit.Network.BindableTool
         public IDisposable RegisterChange(FieldListChange<TValue> valueChange)
         {
             _fieldListChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= valueChange; });
+            return  new UnRegister(() => { _fieldListChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(FieldListChange<TValue> valueChange)
@@ -90,7 +89,7 @@ namespace YuzeToolkit.Network.BindableTool
         {
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return new UnRegister(() => { _fieldListChange -= fieldListChange; });
         }
 
         IDisposable IBindableList<TValue>.RegisterChangeBuff(BindableListChange<TValue> valueChange)
@@ -98,31 +97,31 @@ namespace YuzeToolkit.Network.BindableTool
             valueChange.Invoke(this);
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return  new UnRegister(() => { _fieldListChange -= fieldListChange; });
         }
 
         public IDisposable RegisterAdd(AddValue<TValue> addValue)
         {
             _addValue += addValue;
-            return _disposeGroup.UnRegister(() => { _addValue -= addValue; });
+            return  new UnRegister(() => { _addValue -= addValue; });
         }
 
         public IDisposable RegisterRemove(RemoveValue<TValue> removeValue)
         {
             _removeValue += removeValue;
-            return _disposeGroup.UnRegister(() => { _removeValue -= removeValue; });
+            return  new UnRegister(() => { _removeValue -= removeValue; });
         }
 
         public IDisposable RegisterChange(ChangeValue<TValue> changeValue)
         {
             _changeValue += changeValue;
-            return _disposeGroup.UnRegister(() => { _changeValue -= changeValue; });
+            return  new UnRegister(() => { _changeValue -= changeValue; });
         }
 
         public IDisposable RegisterChange(ClearAllValue clearAllValue)
         {
             _clearAllValue += clearAllValue;
-            return _disposeGroup.UnRegister(() => { _clearAllValue -= clearAllValue; });
+            return new UnRegister(() => { _clearAllValue -= clearAllValue; });
         }
 
 
@@ -130,12 +129,16 @@ namespace YuzeToolkit.Network.BindableTool
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
 
         void IDisposable.Dispose()
         {
+            SLogTool.Release(ref _sLogTool);
             Clear();
-            _disposeGroup.Dispose();
+            _fieldListChange = null;
+            _addValue = null;
+            _removeValue = null;
+            _changeValue = null;
+            _clearAllValue = null;
         }
 
         #endregion

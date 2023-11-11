@@ -57,14 +57,12 @@ namespace YuzeToolkit.BindableTool
 
         public IReadOnlyList<IBindable> Bindables => bindables.Values;
 
-        private SLogTool? _logger;
+        private SLogTool? _sLogTool;
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
 
-        private SLogTool LogTool => _logger ??= new SLogTool(new[]
-        {
-            nameof(BindableSystem)
-        });
+        protected virtual string[] GetLogTags => new[] { nameof(BindableSystem) };
 
-        public void SetLogParent(ILogTool value) => LogTool.Parent = value;
+        public void SetLogParent(ILogTool parent)=> ((SLogTool)LogTool).Parent = parent;
         public IBindableRegister GetRegister(IModifiableOwner owner) => new BindableRegister(this, owner);
 
         public void RegisterBindable(IBindable bindable, IModifiableOwner owner)
@@ -92,7 +90,6 @@ namespace YuzeToolkit.BindableTool
 #endif
             bindable.SetLogParent(LogTool);
             bindables.Add(type, bindable);
-            _disposeGroup.Add(bindable);
         }
 
         /// <summary>
@@ -171,10 +168,11 @@ namespace YuzeToolkit.BindableTool
         }
 
         #region IDisposable
-
-        private DisposeGroup _disposeGroup;
-
-        void IDisposable.Dispose() => _disposeGroup.Dispose();
+        void IDisposable.Dispose()
+        {
+            foreach (var bindable in Bindables) bindable.Dispose();
+            bindables.Clear();
+        }
 
         #endregion
 

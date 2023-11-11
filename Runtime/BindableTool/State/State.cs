@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using YuzeToolkit;
 using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.BindableTool
@@ -19,13 +18,15 @@ namespace YuzeToolkit.BindableTool
         private SLogTool? _sLogTool;
         private IModifiableOwner? _owner;
 
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IState),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
 
@@ -130,15 +131,12 @@ namespace YuzeToolkit.BindableTool
             var index = modifyStates.BinarySearch(modifyState, ModifyStateComparer.Comparer);
             modifyStates.Insert(index >= 0 ? index : ~index, modifyState);
 
-            modifyState.Init(new UnRegister(() => { RemoveModify(modifyState); }), this);
+            modifyState.Init(new UnRegister(() =>
+            {
+                if (modifyStates.Remove(modifyState)) ReCheckValue();
+            }), this);
             ReCheckValue();
-            _disposeGroup.Add(modifyState);
             return modifyState;
-        }
-
-        private void RemoveModify(ModifyState modifyState)
-        {
-            if (modifyStates.Remove(modifyState)) ReCheckValue();
         }
 
         public void ReCheckValue()
@@ -191,7 +189,7 @@ namespace YuzeToolkit.BindableTool
         public IDisposable RegisterChange(ValueChange<bool> onValueChange)
         {
             _onValueChange += onValueChange;
-            return _disposeGroup.UnRegister(() => { _onValueChange -= onValueChange; });
+            return new UnRegister(() => { _onValueChange -= onValueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<bool> onValueChange)
@@ -204,12 +202,12 @@ namespace YuzeToolkit.BindableTool
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
-
         void IDisposable.Dispose()
         {
-            Value = valueBase;
-            _disposeGroup.Dispose();
+            SLogTool.Release(ref _sLogTool);
+            modifyStates.Clear();
+            ReCheckValue();
+            _onValueChange = null;
         }
 
         #endregion

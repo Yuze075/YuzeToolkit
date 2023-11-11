@@ -38,23 +38,12 @@ namespace YuzeToolkit.DriverTool
             }
         }
 
-        /// <summary>
-        /// 初始化方法
-        /// </summary>
-        public void Initialize()
-        {
-            _updateWrapperLists.Capacity = WrapperListsDefaultCapacity;
-            _fixedUpdateWrapperLists.Capacity = WrapperListsDefaultCapacity;
-            _lateUpdateWrapperLists.Capacity = WrapperListsDefaultCapacity;
-        }
-
         #region Update
 
         // 初始化参数
         private readonly List<IUpdateCycle> _updateToAdd = new();
         private readonly List<MonoBaseWrapperList<IUpdate>> _updateWrapperLists = new();
         private readonly Stack<int> _updateWrapperListToRemove = new();
-        private MonoBaseWrapperList<IUpdate>.Comparer _updateComparer;
 
         private void Update()
         {
@@ -99,9 +88,9 @@ namespace YuzeToolkit.DriverTool
         private void AddToList(IUpdateCycle updateCycle)
         {
             var update = updateCycle.Update;
-            var priority = update.Priority;
+            var priority = update.UpdatePriority;
             var index = _updateWrapperLists.BinarySearch(new MonoBaseWrapperList<IUpdate>(priority),
-                _updateComparer);
+                MonoBaseWrapperList<IUpdate>.Comparer);
 
             MonoBaseWrapperList<IUpdate> wrapperList;
             if (index >= 0)
@@ -127,7 +116,6 @@ namespace YuzeToolkit.DriverTool
         private readonly List<IFixedUpdateCycle> _fixedUpdateToAdd = new();
         private readonly List<MonoBaseWrapperList<IFixedUpdate>> _fixedUpdateWrapperLists = new();
         private readonly Stack<int> _fixedUpdateWrapperListToRemove = new();
-        private MonoBaseWrapperList<IFixedUpdate>.Comparer _fixedUpdateComparer;
 
         private void FixedUpdate()
         {
@@ -173,9 +161,9 @@ namespace YuzeToolkit.DriverTool
         private void AddToList(IFixedUpdateCycle fixedUpdateCycle)
         {
             var fixedUpdate = fixedUpdateCycle.FixedUpdate;
-            var priority = fixedUpdate.Priority;
+            var priority = fixedUpdate.UpdatePriority;
             var index = _fixedUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<IFixedUpdate>(priority),
-                _fixedUpdateComparer);
+                MonoBaseWrapperList<IFixedUpdate>.Comparer);
 
             MonoBaseWrapperList<IFixedUpdate> wrapperList;
             if (index >= 0)
@@ -201,7 +189,6 @@ namespace YuzeToolkit.DriverTool
         private readonly List<ILateUpdateCycle> _lateUpdateToAdd = new();
         private readonly List<MonoBaseWrapperList<ILateUpdate>> _lateUpdateWrapperLists = new();
         private readonly Stack<int> _lateUpdateWrapperListToRemove = new();
-        private MonoBaseWrapperList<ILateUpdate>.Comparer _lateUpdateComparer;
 
         private void LateUpdate()
         {
@@ -247,10 +234,10 @@ namespace YuzeToolkit.DriverTool
         private void AddToList(ILateUpdateCycle lateUpdateCycle)
         {
             var lateUpdate = lateUpdateCycle.LateUpdate;
-            var priority = lateUpdate.Priority;
+            var priority = lateUpdate.UpdatePriority;
             var index = _lateUpdateWrapperLists.BinarySearch(new MonoBaseWrapperList<ILateUpdate>(priority),
-                _lateUpdateComparer);
-
+                MonoBaseWrapperList<ILateUpdate>.Comparer);
+            
             MonoBaseWrapperList<ILateUpdate> wrapperList;
             if (index >= 0)
             {

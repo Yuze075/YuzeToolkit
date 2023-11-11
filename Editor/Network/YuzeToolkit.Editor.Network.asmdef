@@ -1,0 +1,33 @@
+{
+    "name": "YuzeToolkit.Editor.Network",
+    "rootNamespace": "",
+    "references": [
+        "YuzeToolkit",
+        "YuzeToolkit.Network",
+        "Unity.Netcode.Runtime",
+        "Toolbox",
+        "Toolbox.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.netcode.gameobjects",
+            "expression": "0.0.0",
+            "define": "USE_UNITY_NETCODE"
+        },
+        {
+            "name": "com.browar.editor-toolbox",
+            "expression": "0.0.0",
+            "define": "USE_EDITOR_TOOLBOX"
+        }
+    ],
+    "noEngineReferences": false
+}

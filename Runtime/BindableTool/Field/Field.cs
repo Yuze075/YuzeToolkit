@@ -13,15 +13,16 @@ namespace YuzeToolkit.BindableTool
     {
         public Field(TValue? value = default) => this.value = value;
 
-        private SLogTool? _logger;
+        private SLogTool? _sLogTool;
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
 
-        private SLogTool LogTool => _logger ??= new SLogTool(new[]
+        protected virtual string[] GetLogTags => new[]
         {
-            nameof(IField<TValue>),
+            nameof(Field<TValue>),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         [SerializeField] private TValue? value;
 
@@ -43,7 +44,7 @@ namespace YuzeToolkit.BindableTool
         public IDisposable RegisterChange(ValueChange<TValue> valueChange)
         {
             _valueChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _valueChange -= valueChange; });
+            return new UnRegister(() => { _valueChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
@@ -56,12 +57,11 @@ namespace YuzeToolkit.BindableTool
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
-
         void IDisposable.Dispose()
         {
+            SLogTool.Release(ref _sLogTool);
             Value = default;
-            _disposeGroup.Dispose();
+            _valueChange = null;
         }
 
         #endregion

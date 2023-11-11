@@ -6,7 +6,7 @@ namespace YuzeToolkit.UITool
 {
     /// <summary>
     /// 框架的核心底层接口，用于将各个组件统一组合在一起<br/>
-    /// 可以注册不同的组件，例如: <see cref="IModel"/> 等，也可以获取对应的组件（通过<see cref="Rule"/>下的拓展方法）<br/>
+    /// 可以注册不同的组件，例如: <see cref="IUIModel"/> 等，也可以获取对应的组件（通过<see cref="Rule"/>下的拓展方法）<br/>
     /// 框架核心逻辑为泛型单例，继承泛型实现之后，每个泛型单独用于一个自己的<see cref="IUICore"/>，所有应该给每个面板单独继承一个<see cref="IUICore"/><br/>
     /// <code>
     /// 框架：
@@ -25,23 +25,23 @@ namespace YuzeToolkit.UITool
     /// </summary>
     public interface IUICore : ICanEvents, IDisposable
     {
-        internal TModel? GetModel<TModel>() where TModel : IModel;
-        internal TUtility? GetUtility<TUtility>() where TUtility : IUtility;
+        TModel? GetModel<TModel>() where TModel : IUIModel;
+        TUtility? GetUtility<TUtility>() where TUtility : IUIUtility;
 
-        internal TModel GetNotNullModel<TModel>(string? name = null, string? message = null,
-            bool additionalCheck = true) where TModel : IModel;
+        TModel GetNotNullModel<TModel>(string? name = null, string? message = null,
+            bool additionalCheck = true) where TModel : IUIModel;
 
-        internal TUtility GetNotNullUtility<TUtility>(string? name = null, string? message = null,
-            bool additionalCheck = true) where TUtility : IUtility;
+        TUtility GetNotNullUtility<TUtility>(string? name = null, string? message = null,
+            bool additionalCheck = true) where TUtility : IUIUtility;
 
-        internal bool TryGetModel<TModel>(out TModel model) where TModel : IModel;
-        internal bool TryGetUtility<TUtility>(out TUtility utility) where TUtility : IUtility;
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        internal void SendCommand(ICommand<Empty> command);
+        bool TryGetModel<TModel>(out TModel model) where TModel : IUIModel;
+        bool TryGetUtility<TUtility>(out TUtility utility) where TUtility : IUIUtility;
 
         // ReSharper disable Unity.PerformanceAnalysis
-        internal TResult SendCommand<TResult>(ICommand<TResult> command);
+        void SendCommand(ICommand<Empty> command);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        TResult SendCommand<TResult>(ICommand<TResult> command);
     }
 
     /// <inheritdoc cref="IUICore" />

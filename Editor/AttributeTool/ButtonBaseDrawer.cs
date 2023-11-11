@@ -14,8 +14,9 @@ namespace YuzeToolkit.Editor.AttributeTool
             EditorGUI.BeginProperty(rect, label, property);
             var buttonAttribute = (ButtonAttribute)attribute;
 
-            var target = EditorHelper.GetTargetObjectWithProperty(property);
-            var methodInfos = Helper.GetAllMethods(target.GetType(), buttonAttribute.MethodName);
+            var target = property.GetPropertyOwnerObject();
+            if (target == null) return;
+            var methodInfos = target.GetType().GetAllMethods(buttonAttribute.MethodName);
 
             // 如果没有对应函数, 提升出错
             var enumerable = methodInfos as MethodInfo[] ?? methodInfos.ToArray();
@@ -29,12 +30,11 @@ namespace YuzeToolkit.Editor.AttributeTool
             var methodInfo = enumerable.FirstOrDefault(info => info.GetParameters().Length <= 0);
             if (methodInfo == null)
             {
-                
                 EditorHelper.DrawWarningMessage(rect, property.displayName + "(不存在无参函数!)");
                 EditorGUI.EndProperty();
                 return;
             }
-            
+
             var canInvoke = buttonAttribute.SelectedEnableMode switch
             {
                 ButtonEnableMode.Always => true,
@@ -42,22 +42,23 @@ namespace YuzeToolkit.Editor.AttributeTool
                 ButtonEnableMode.Playmode => EditorApplication.isPlaying,
                 _ => false
             };
-            
+
             if (!canInvoke)
             {
                 EditorHelper.DrawWarningMessage(rect, property.displayName + "(当前不能触发函数!)");
                 EditorGUI.EndProperty();
                 return;
             }
-            
+
             var text = string.IsNullOrEmpty(buttonAttribute.Text)
                 ? methodInfo.Name
                 : buttonAttribute.Text;
-            
+
             if (GUI.Button(rect, text))
             {
                 methodInfo.Invoke(target, null);
             }
+
             EditorGUI.EndProperty();
         }
     }

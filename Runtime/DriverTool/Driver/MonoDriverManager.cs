@@ -13,13 +13,13 @@ namespace YuzeToolkit.DriverTool
     {
         #region static
 
-        private static bool _s_isInitialize;
-        private static MonoDriverManager? _s_monoDriverManager;
+        private static bool s_isInitialize;
+        private static MonoDriverManager? s_monoDriverManager;
         private static readonly List<(IMonoBase, DisposableWaiter)> S_MonoBases = new();
 
         public static IDisposable Run(IMonoBase monoBase)
         {
-            if (!_s_isInitialize)
+            if (!s_isInitialize)
             {
                 LogSys.Warning($"没有创建对应的{nameof(MonoDriverManager)}！");
                 var waiter = new DisposableWaiter();
@@ -31,13 +31,13 @@ namespace YuzeToolkit.DriverTool
             {
                 foreach (var (sMonoBase, disposableWaiter) in S_MonoBases)
                 {
-                    disposableWaiter.Disposable = _s_monoDriverManager!.RunPrivate(sMonoBase);
+                    disposableWaiter.Disposable = s_monoDriverManager!.RunPrivate(sMonoBase);
                 }
 
                 S_MonoBases.Clear();
             }
 
-            return _s_monoDriverManager!.RunPrivate(monoBase);
+            return s_monoDriverManager!.RunPrivate(monoBase);
         }
 
         #endregion
@@ -69,7 +69,7 @@ namespace YuzeToolkit.DriverTool
             if (_initSelf) return;
             _initSelf = true;
 
-            if (_s_isInitialize)
+            if (s_isInitialize)
             {
                 Destroy(gameObject);
                 LogSys.Error("驱动器已经存在！", "Utility", "MonoDriverManager");
@@ -97,22 +97,17 @@ namespace YuzeToolkit.DriverTool
             }
 
             DontDestroyOnLoad(gameObject);
-            _s_isInitialize = true;
-            _s_monoDriverManager = this;
-
-            LogSys.IsNotNull(_first, nameof(_first)).Initialize();
-            LogSys.IsNotNull(_before, nameof(_before)).Initialize();
-            LogSys.IsNotNull(_after, nameof(_after)).Initialize();
-            LogSys.IsNotNull(_end, nameof(_end)).Initialize();
+            s_isInitialize = true;
+            s_monoDriverManager = this;
         }
 
         private void Temp()
         {
             if (!_initSelf) return;
-            if (_s_monoDriverManager != this) return;
+            if (s_monoDriverManager != this) return;
             _initSelf = false;
-            _s_isInitialize = false;
-            _s_monoDriverManager = null;
+            s_isInitialize = false;
+            s_monoDriverManager = null;
             Destroy(_first);
             Destroy(_before);
             Destroy(_after);
@@ -129,19 +124,19 @@ namespace YuzeToolkit.DriverTool
             switch (monoBase.Type)
             {
                 case OrderType.First:
-                    LogSys.IsNotNull(_first, nameof(_first)).AddMonoBase(disposable);
+                    _first.IsNotNull(nameof(_first)).AddMonoBase(disposable);
                     break;
                 case OrderType.Before:
-                    LogSys.IsNotNull(_before, nameof(_before)).AddMonoBase(disposable);
+                    _before.IsNotNull(nameof(_before)).AddMonoBase(disposable);
                     break;
                 case OrderType.After:
-                    LogSys.IsNotNull(_after, nameof(_after)).AddMonoBase(disposable);
+                    _after.IsNotNull(nameof(_after)).AddMonoBase(disposable);
                     break;
                 case OrderType.End:
-                    LogSys.IsNotNull(_end, nameof(_end)).AddMonoBase(disposable);
+                    _end.IsNotNull(nameof(_end)).AddMonoBase(disposable);
                     break;
                 default:
-                    throw LogSys.ThrowException(new ArgumentOutOfRangeException());
+                    throw new ArgumentOutOfRangeException().ThrowException();
             }
 
             return disposable;
@@ -160,6 +155,7 @@ namespace YuzeToolkit.DriverTool
                 }
 
                 Disposable.Dispose();
+                Disposable = null;
             }
         }
     }

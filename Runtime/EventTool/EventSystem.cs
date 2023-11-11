@@ -17,18 +17,14 @@ namespace YuzeToolkit.EventTool
         {
         }
 
-        public EventSystem(ILogTool parent) => _sLogTool = new SLogTool(parent);
+        public EventSystem(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         private SLogTool? _sLogTool;
-
-        public ILogTool LogTool => _sLogTool ??= new SLogTool(new[]
-        {
-            nameof(EventSystem)
-        });
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+        protected virtual string[] GetLogTags => new[] { nameof(EventSystem) };
 
         private readonly Dictionary<Type, IEventAction> _eventActions = new();
         [SerializeField] [IgnoreParent] private ShowList<ICanEvents> eventsList = new();
-        private DisposeGroup _disposeGroup;
 
         public void SendEvent<TBase, T>() where T : TBase, new() => SendEvent<TBase>(new T(), typeof(TBase));
         public void SendEvent<T>() where T : new() => SendEvent(new T(), typeof(T));
@@ -116,17 +112,17 @@ namespace YuzeToolkit.EventTool
         public IDisposable RegisterEvent(ICanEvents events)
         {
             eventsList.Add(events);
-            return _disposeGroup.UnRegister(() => eventsList.Remove(events));
+            return new UnRegister(() => eventsList.Remove(events));
         }
 
         public void Dispose()
         {
+            SLogTool.Release(ref _sLogTool);
             foreach (var eventAction in _eventActions.Values)
                 eventAction?.Dispose();
 
-            _disposeGroup.Dispose();
-            _eventActions.Clear();
             eventsList.Clear();
+            _eventActions.Clear();
         }
 
         private interface IEventAction : IDisposable
@@ -137,20 +133,15 @@ namespace YuzeToolkit.EventTool
         private class EventAction<T> : IEventAction
         {
             private Action<T>? _action;
-            private DisposeGroup _disposeGroup;
             public void Invoke(T value) => _action?.Invoke(value);
 
             public IDisposable Register(Action<T> action)
             {
                 _action += action;
-                return _disposeGroup.UnRegister(() => _action -= action);
+                return new UnRegister(() => _action -= action);
             }
 
-            public void Dispose()
-            {
-                _disposeGroup.Dispose();
-                _action = null;
-            }
+            public void Dispose() => _action = null;
 
             bool IEventAction.Invoke<TValue>(TValue value)
             {

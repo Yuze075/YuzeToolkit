@@ -22,7 +22,7 @@ namespace YuzeToolkit.InspectorTool
 #endif
             foreach (var t in enumerable) Add(t);
         }
-        
+
         public ShowList(int capacity)
         {
 #if UNITY_EDITOR
@@ -32,7 +32,10 @@ namespace YuzeToolkit.InspectorTool
         }
 
 #if UNITY_EDITOR
-        [IgnoreParent] [SerializeReference] [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)]
+        [LabelByParent]
+        [IgnoreParent]
+        [SerializeReference]
+        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)]
         private List<IShowValue> _showList;
 #endif
         private List<T>? _nativeList;
@@ -58,7 +61,7 @@ namespace YuzeToolkit.InspectorTool
         public void Insert(int index, T item)
         {
 #if UNITY_EDITOR
-            _showList.Insert(index, IShowValue.GetShowValue(item));
+            _showList.Insert(index, IShowValue.GetShowValue(item, -1));
 #endif
             NativeList.Insert(index, item);
         }
@@ -77,7 +80,7 @@ namespace YuzeToolkit.InspectorTool
             set
             {
 #if UNITY_EDITOR
-                _showList[index] = IShowValue.GetShowValue(value);
+                _showList[index] = IShowValue.GetShowValue(value, -1);
 #endif
                 NativeList[index] = value;
             }

@@ -28,12 +28,12 @@ namespace YuzeToolkit.Editor.AttributeTool.Info
             }
 
             // 获取路径对象和自己的对象
-            var target = EditorHelper.GetValue(property, showPropertyAttribute.Path);
-            var self = EditorHelper.GetValue(property, property.name);
+            var target = property.GetValue(showPropertyAttribute.Path);
+            var self = property.GetValue(property.name);
 
             // 判断类型是否相同(或者是否可以继承
             if (target != null && self != null && self.GetType().IsInstanceOfType(target) &&
-                EditorHelper.SetValue(property, property.name, target))
+                property.SetValue(property.name, target))
             {
                 GUI.enabled = false;
                 EditorGUI.PropertyField(rect, property, label, true);

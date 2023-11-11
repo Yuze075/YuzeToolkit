@@ -8,8 +8,8 @@ namespace YuzeToolkit.InspectorTool
     {
         public static ShowKeyValuePair GetKeyValuePair<TKey, TValue>(TKey key, TValue value) => new()
         {
-            _key = IShowValue.GetShowValue(key, "Key"),
-            _value = IShowValue.GetShowValue(value, "Value")
+            _key = IShowValue.GetShowValue(key),
+            _value = IShowValue.GetShowValue(value)
         };
 
         // ReSharper disable once NotAccessedField.Local

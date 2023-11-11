@@ -26,6 +26,6 @@ namespace YuzeToolkit.BindableTool
         /// <summary>
         /// 设置<see cref="ILogTool"/>的Parent, 用于打印追踪
         /// </summary>
-        void SetLogParent(ILogTool value);
+        void SetLogParent(ILogTool parent);
     }
 }

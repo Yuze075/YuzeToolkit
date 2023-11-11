@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace YuzeToolkit.IoCTool
+﻿namespace YuzeToolkit.IoCTool
 {
     public enum ELifetime
     {

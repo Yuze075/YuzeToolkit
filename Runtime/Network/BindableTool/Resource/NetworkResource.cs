@@ -38,14 +38,15 @@ namespace YuzeToolkit.Network.BindableTool
 
         private SLogTool? _sLogTool;
         private IModifiableOwner? _owner;
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
 
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IResource<TValue>),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
 
@@ -150,7 +151,7 @@ namespace YuzeToolkit.Network.BindableTool
         public IDisposable RegisterChange(ValueChange<TValue> valueChange)
         {
             _valueChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _valueChange -= valueChange; });
+            return new UnRegister(() => { _valueChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
@@ -162,22 +163,27 @@ namespace YuzeToolkit.Network.BindableTool
         public IDisposable RegisterOutOfMaxRange(OutOfMaxRange<TValue> outOfMaxRange)
         {
             _outOfMaxRange += outOfMaxRange;
-            return _disposeGroup.UnRegister(() => { _outOfMaxRange -= outOfMaxRange; });
+            return new UnRegister(() => { _outOfMaxRange -= outOfMaxRange; });
         }
 
         public IDisposable RegisterOutOfMinRange(OutOfMinRange<TValue> outOfMinRange)
         {
             _outOfMinRange += outOfMinRange;
-            return _disposeGroup.UnRegister(() => { _outOfMinRange -= outOfMinRange; });
+            return new UnRegister(() => { _outOfMinRange -= outOfMinRange; });
         }
 
         #endregion
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
-
-        void IDisposable.Dispose() => _disposeGroup.Dispose();
+        void IDisposable.Dispose()
+        {
+            SLogTool.Release(ref _sLogTool);
+            Value = CastToTValue(default);
+            _valueChange = null;
+            _outOfMaxRange = null;
+            _outOfMinRange = null;
+        }
 
         #endregion
     }

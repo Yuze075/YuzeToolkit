@@ -7,20 +7,20 @@ namespace YuzeToolkit.DriverTool
     {
         IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper>? Wrappers { get; set; }
         int Index { get; set; }
-        IUpdate Update { get; set; }
+        IUpdate Update { get; }
     }
 
     internal interface IFixedUpdateCycle : IDisposable
     {
-        internal IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper>? Wrappers { get; set; }
-        internal int Index { get; set; }
-        IFixedUpdate FixedUpdate { get; set; }
+        IList<MonoBaseWrapperList<IFixedUpdate>.MonoBaseWrapper>? Wrappers { get; set; }
+        int Index { get; set; }
+        IFixedUpdate FixedUpdate { get; }
     }
 
     internal interface ILateUpdateCycle : IDisposable
     {
-        internal IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper>? Wrappers { get; set; }
-        internal int Index { get; set; }
-        ILateUpdate LateUpdate{ get; set; }
+        IList<MonoBaseWrapperList<ILateUpdate>.MonoBaseWrapper>? Wrappers { get; set; }
+        int Index { get; set; }
+        ILateUpdate LateUpdate { get; }
     }
 }

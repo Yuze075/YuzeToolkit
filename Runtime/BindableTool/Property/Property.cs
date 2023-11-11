@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using YuzeToolkit.LogTool;
-using YuzeToolkit;
 
 namespace YuzeToolkit.BindableTool
 {
@@ -22,13 +21,15 @@ namespace YuzeToolkit.BindableTool
         private SLogTool? _sLogTool;
         private IModifiableOwner? _owner;
 
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IProperty<TValue>),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
 
@@ -98,11 +99,9 @@ namespace YuzeToolkit.BindableTool
 
             modifyProperty.Init(new UnRegister(() =>
             {
-                if (modifyProperties.Remove(modifyProperty))
-                    ReCheckValue();
+                if (modifyProperties.Remove(modifyProperty)) ReCheckValue();
             }), this);
             ReCheckValue();
-            _disposeGroup.Add(modifyProperty);
             return modifyProperty;
         }
 
@@ -183,7 +182,7 @@ namespace YuzeToolkit.BindableTool
         public IDisposable RegisterChange(ValueChange<TValue> valueChange)
         {
             _valueChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _valueChange -= valueChange; });
+            return new UnRegister(() => { _valueChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
@@ -196,12 +195,12 @@ namespace YuzeToolkit.BindableTool
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
-
         void IDisposable.Dispose()
         {
-            Value = valueBase;
-            _disposeGroup.Dispose();
+            SLogTool.Release(ref _sLogTool);
+            modifyProperties.Clear();
+            ReCheckValue();
+            _valueChange = null;
         }
 
         #endregion

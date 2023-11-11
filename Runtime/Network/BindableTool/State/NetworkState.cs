@@ -13,7 +13,7 @@ namespace YuzeToolkit.Network.BindableTool
     /// 并且通过<see cref="NetworkVariable{T}"/>进行网络变量的同步<br/>
     /// </summary>
     [Serializable]
-    public class NetworkState : NetworkVariable<bool>, IState
+    public abstract class NetworkState : NetworkVariable<bool>, IState
     {
         protected NetworkState(bool valueBase,
             NetworkVariableReadPermission readPerm = NetworkVariableReadPermission.Everyone,
@@ -21,19 +21,19 @@ namespace YuzeToolkit.Network.BindableTool
             base(valueBase, readPerm, writePerm)
         {
             this.valueBase = valueBase;
-            OnValueChanged += (oldValue, newValue) => { _onValueChange?.Invoke(oldValue, newValue); };
+            OnValueChanged += (oldValue, newValue) => { _valueChange?.Invoke(oldValue, newValue); };
         }
 
         private SLogTool? _sLogTool;
         private IModifiableOwner? _owner;
-
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IState),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
 
@@ -139,11 +139,9 @@ namespace YuzeToolkit.Network.BindableTool
 
             modifyState.Init(new UnRegister(() =>
             {
-                if (modifyStates.Remove(modifyState))
-                    ReCheckValue();
+                if (modifyStates.Remove(modifyState)) ReCheckValue();
             }), this);
             ReCheckValue();
-            _disposeGroup.Add(modifyState);
             return modifyState;
         }
 
@@ -192,12 +190,12 @@ namespace YuzeToolkit.Network.BindableTool
 
         #region RegisterChange
 
-        private ValueChange<bool>? _onValueChange;
+        private ValueChange<bool>? _valueChange;
 
         public IDisposable RegisterChange(ValueChange<bool> onValueChange)
         {
-            _onValueChange += onValueChange;
-            return _disposeGroup.UnRegister(() => { _onValueChange -= onValueChange; });
+            _valueChange += onValueChange;
+            return  new UnRegister(() => { _valueChange -= onValueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<bool> onValueChange)
@@ -209,13 +207,13 @@ namespace YuzeToolkit.Network.BindableTool
         #endregion
 
         #region IDisposable
-
-        private DisposeGroup _disposeGroup;
-
+        
         void IDisposable.Dispose()
         {
+            SLogTool.Release(ref _sLogTool);
             Value = valueBase;
-            _disposeGroup.Dispose();
+            modifyStates.Clear();
+            _valueChange = null;
         }
 
         #endregion

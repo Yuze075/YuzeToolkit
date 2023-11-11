@@ -1,6 +1,4 @@
-﻿using YuzeToolkit.DriverTool;
-
-namespace YuzeToolkit.UITool
+﻿namespace YuzeToolkit.UITool
 {
     /// <summary>
     /// <inheritdoc cref="IBelongUICore" />

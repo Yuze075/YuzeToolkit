@@ -10,21 +10,19 @@ namespace YuzeToolkit.BindableTool
     [Serializable]
     public class ObjectFieldList<TValue> : IFieldList<TValue> where TValue : UnityObject
     {
-        public ObjectFieldList(ILogTool parent = null!)
-            => (LogTool.Parent, list) = (parent, new List<TValue>());
-
-        public ObjectFieldList(IEnumerable<TValue> enumerable, ILogTool parent = null!)
-            => (LogTool.Parent, list) = (parent, new List<TValue>(enumerable));
+        public ObjectFieldList() => list = new List<TValue>();
+        public ObjectFieldList(IEnumerable<TValue> enumerable) => list = new List<TValue>(enumerable);
 
         private SLogTool? _sLogTool;
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
 
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IFieldList<TValue>),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         [ReorderableList(Foldable = false, HasLabels = false)] [InLineEditor] [SerializeField]
         private List<TValue> list;
@@ -100,7 +98,7 @@ namespace YuzeToolkit.BindableTool
         public IDisposable RegisterChange(FieldListChange<TValue> valueChange)
         {
             _fieldListChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= valueChange; });
+            return new UnRegister(() => { _fieldListChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(FieldListChange<TValue> valueChange)
@@ -113,7 +111,7 @@ namespace YuzeToolkit.BindableTool
         {
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return new UnRegister(() => { _fieldListChange -= fieldListChange; });
         }
 
         IDisposable IBindableList<TValue>.RegisterChangeBuff(BindableListChange<TValue> valueChange)
@@ -121,40 +119,47 @@ namespace YuzeToolkit.BindableTool
             valueChange.Invoke(this);
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return _disposeGroup.UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return new UnRegister(() => { _fieldListChange -= fieldListChange; });
         }
 
         public IDisposable RegisterAdd(AddValue<TValue> addValue)
         {
             _addValue += addValue;
-            return _disposeGroup.UnRegister(() => { _addValue -= addValue; });
+            return new UnRegister(() => { _addValue -= addValue; });
         }
 
         public IDisposable RegisterRemove(RemoveValue<TValue> removeValue)
         {
             _removeValue += removeValue;
-            return _disposeGroup.UnRegister(() => { _removeValue -= removeValue; });
+            return new UnRegister(() => { _removeValue -= removeValue; });
         }
 
         public IDisposable RegisterChange(ChangeValue<TValue> changeValue)
         {
             _changeValue += changeValue;
-            return _disposeGroup.UnRegister(() => { _changeValue -= changeValue; });
+            return new UnRegister(() => { _changeValue -= changeValue; });
         }
 
         public IDisposable RegisterChange(ClearAllValue clearAllValue)
         {
             _clearAllValue += clearAllValue;
-            return _disposeGroup.UnRegister(() => { _clearAllValue -= clearAllValue; });
+            return new UnRegister(() => { _clearAllValue -= clearAllValue; });
         }
 
         #endregion
 
         #region IDisposable
 
-        private DisposeGroup _disposeGroup;
-
-        void IDisposable.Dispose() => _disposeGroup.Dispose();
+        void IDisposable.Dispose()
+        {
+            SLogTool.Release(ref _sLogTool);
+            Clear();
+            _fieldListChange = null;
+            _addValue = null;
+            _removeValue = null;
+            _changeValue = null;
+            _clearAllValue = null;
+        }
 
         #endregion
 

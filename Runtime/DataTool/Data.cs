@@ -7,11 +7,17 @@ using YuzeToolkit.LogTool;
 namespace YuzeToolkit.DataTool
 {
     [Serializable]
-    public abstract class Data<TValue, TId> : IData<TValue> where TValue : IModel<TId>
+    public abstract class Data<TValue, TId> : IData<TValue> where TValue : IModel<TId> where TId : unmanaged
     {
         [IgnoreParent] [SerializeField] private ShowDictionaryIndex<TId, TValue> values = new();
 
-        private readonly SLogTool _sLogTool = new(); // todo 绑定log parent
+        private SLogTool? _sLogTool;
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+        protected virtual string[] GetLogTags => new[]
+        {
+            typeof(Data<TValue, TId>).FullName,
+            GetType().FullName
+        };
 
         public IReadOnlyList<TValue> Values => values.Values;
 
@@ -26,13 +32,13 @@ namespace YuzeToolkit.DataTool
         {
             if (!CheckId(id))
             {
-                _sLogTool.Log($"Key为{id}值不合法!", ELogType.Warning);
+                LogTool.Log($"Key为{id}值不合法!", ELogType.Warning);
                 return default;
             }
 
             if (!values.TryGetValue(id, out var value))
             {
-                _sLogTool.Log($"无法获取到Key值为{id}对应的Value!", ELogType.Warning);
+                LogTool.Log($"无法获取到Key值为{id}对应的Value!", ELogType.Warning);
                 return default;
             }
 
@@ -46,19 +52,29 @@ namespace YuzeToolkit.DataTool
         {
             if (!CheckId(id))
             {
-                _sLogTool.Log($"Key为{id}值不合法!", ELogType.Warning);
+                LogTool.Log($"Key为{id}值不合法!", ELogType.Warning);
                 value = default!;
                 return false;
             }
 
             if (!values.TryGetValue(id, out value))
             {
-                _sLogTool.Log($"无法获取到Key值为{id}对应的Value!", ELogType.Warning);
+                LogTool.Log($"无法获取到Key值为{id}对应的Value!", ELogType.Warning);
                 return false;
             }
 
             return true;
         }
+
+        public int GetIndex(TId id)
+        {
+            var index = values.GetIndex(id);
+            if (index >= 0) return index;
+
+            LogTool.Log($"无法获取到Key值为{id}对应的ValueIndex!", ELogType.Warning);
+            return -1;
+        }
+
 
         #region IData<TValue>
 
@@ -66,7 +82,7 @@ namespace YuzeToolkit.DataTool
         {
             if (getId is not TId id)
             {
-                _sLogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
+                LogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
                 return default;
             }
 
@@ -77,7 +93,7 @@ namespace YuzeToolkit.DataTool
         {
             if (getId is not TId id)
             {
-                _sLogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
+                LogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
                 value = default!;
                 return false;
             }
@@ -89,40 +105,36 @@ namespace YuzeToolkit.DataTool
         {
             if (value is not IModel<TId> model)
             {
-                _sLogTool.Log($"传入的Value类型为{typeof(TValue)}, 不能转化为{typeof(IModel<TId>)}类型, 类型错误!", ELogType.Warning);
+                LogTool.Log($"传入的Value类型为{typeof(TValue)}, 不能转化为{typeof(IModel<TId>)}类型, 类型错误!", ELogType.Warning);
                 return -1;
             }
 
             return GetIndex(model.Id);
         }
 
-        public int GetIndex<TGetId>(TGetId getId)
+        int IData<TValue>.GetIndex<TGetId>(TGetId getId)
         {
             if (getId is not TId id)
             {
-                _sLogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
+                LogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
                 return -1;
             }
 
-            var index = values.GetIndex(id);
-            if (index >= 0) return index;
-
-            _sLogTool.Log($"无法获取到Key值为{getId}对应的ValueIndex!", ELogType.Warning);
-            return -1;
+            return GetIndex(id);
         }
 
         public TValue? GetByIndex(int index, int idHashCode)
         {
             if (index < 0 || index >= values.Count)
             {
-                _sLogTool.Log($"尝试获取的index:{index}超出范围!", ELogType.Warning);
+                LogTool.Log($"尝试获取的index:{index}超出范围!", ELogType.Warning);
                 return default;
             }
 
             var value = values.GetByIndex(index);
-            if (value.Id!.GetHashCode() != idHashCode)
+            if (value.Id.GetFixedHashCode() != idHashCode)
             {
-                _sLogTool.Log($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!", ELogType.Warning);
+                LogTool.Log($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!", ELogType.Warning);
                 return default;
             }
 
@@ -133,36 +145,36 @@ namespace YuzeToolkit.DataTool
         {
             if (index < 0 || index >= values.Count)
             {
-                _sLogTool.Log($"尝试获取的index:{index}超出范围!", ELogType.Warning);
+                LogTool.Log($"尝试获取的index:{index}超出范围!", ELogType.Warning);
                 value = default!;
                 return false;
             }
 
             value = values.GetByIndex(index);
 
-            if (value.Id!.GetHashCode() != idHashCode)
+            if (value.Id.GetFixedHashCode() != idHashCode)
             {
-                _sLogTool.Log($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!", ELogType.Warning);
+                LogTool.Log($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!", ELogType.Warning);
                 return false;
             }
 
             return true;
         }
 
-        void IData<TValue>.AddData(TValue value)
+        void IData<TValue>.RegisterValue(TValue value)
         {
             if (values.TryGetValue(value.Id, out var v))
             {
                 if (value.Equals(v)) return;
 
-                _sLogTool.Log($"存在相同key值{value.Id}的{typeof(TValue)}的值!", ELogType.Error);
+                LogTool.Log($"存在相同key值{value.Id}的{typeof(TValue)}的值!", ELogType.Error);
                 return;
             }
 
             values.Add(value.Id, value);
         }
 
-        void IData<TValue>.AddData(IEnumerable<TValue> values)
+        void IData<TValue>.RegisterValues(IEnumerable<TValue> values)
         {
             foreach (var value in values)
             {
@@ -170,7 +182,7 @@ namespace YuzeToolkit.DataTool
                 {
                     if (value.Equals(v)) continue;
 
-                    _sLogTool.Log($"存在相同key值{value.Id}的{typeof(TValue)}的值!", ELogType.Error);
+                    LogTool.Log($"存在相同key值{value.Id}的{typeof(TValue)}的值!", ELogType.Error);
                     continue;
                 }
 
@@ -178,67 +190,27 @@ namespace YuzeToolkit.DataTool
             }
         }
 
-        void IData<TValue>.Clear()
-        {
-            _sLogTool.Log($"清空数据类型为{typeof(TValue)}的{typeof(Data<TValue, TId>)}!");
-            values.Clear();
-        }
-
         #endregion
 
         #region IData
 
-        TGetValue? IData.Get<TGetValue, TGetId>(TGetId getId)
-            where TGetValue : default
+        void IData.Clear()
         {
-            if (getId is not TId id)
-            {
-                _sLogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
-                return default;
-            }
-
-            if (Get(id) is not TGetValue getValue)
-            {
-                _sLogTool.Log($"获取到的Value类型为{typeof(TValue)}, 不是需要的{typeof(TGetValue)}, 类型错误!", ELogType.Warning);
-                return default;
-            }
-
-            return getValue;
-        }
-
-        bool IData.TryGet<TGetValue, TGetId>(TGetId getId,
-            out TGetValue getValue)
-        {
-            if (getId is not TId id)
-            {
-                _sLogTool.Log($"传入的Id类型为{typeof(TGetId)}, 不是需要的{typeof(TId)}类型, 类型错误!", ELogType.Warning);
-                getValue = default!;
-                return false;
-            }
-
-            if (!TryGet(id, out var value))
-            {
-                _sLogTool.Log($"无法获取到Key值为{getId}对应的Value!", ELogType.Warning);
-                getValue = default!;
-                return false;
-            }
-
-            if (value is not TGetValue value1)
-            {
-                _sLogTool.Log($"获取到的Value类型为{typeof(TValue)}, 不是需要的{typeof(TGetValue)}, 类型错误!", ELogType.Warning);
-                getValue = default!;
-                return false;
-            }
-
-            getValue = value1;
-            return true;
+            LogTool.Log($"清空数据类型为{typeof(TValue)}的{typeof(Data<TValue, TId>)}!");
+            values.Clear();
         }
 
         ILogTool IData.Parent
         {
-            set => _sLogTool.Parent = value;
+            set => ((SLogTool)LogTool).Parent = value;
         }
 
         #endregion
+
+        void IDisposable.Dispose()
+        {
+            ((IData)this).Clear();
+            SLogTool.Release(ref _sLogTool);
+        }
     }
 }

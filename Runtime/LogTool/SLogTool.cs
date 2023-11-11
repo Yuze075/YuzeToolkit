@@ -1,10 +1,11 @@
 ﻿using System;
+using YuzeToolkit.PoolTool;
 
 namespace YuzeToolkit.LogTool
 {
     /// <summary>
     /// 用于<see cref="System.Object"/>对象类型的打印类<br/>
-    /// 没有绑定的<see cref="UnityEngine.Object"/>的context, 但可以通过绑定<see cref="SLogTool.Parent"/>绑定<see cref="ULogTool"/><br/>
+    /// 没有绑定的<see cref="UnityEngine.Object"/>的context, 但可以通过绑定<see cref="SLogTool.Parent"/>绑定<see cref="ILogTool"/><br/>
     /// 四种打印类型<br/>
     /// Log: 打印各种显示信息<br/>
     /// Warning: 打印各种警告信息, 这些逻辑暂时不影响游戏运行, 但是也不应该出现<br/>
@@ -15,22 +16,63 @@ namespace YuzeToolkit.LogTool
     /// </summary>
     public class SLogTool : ILogTool
     {
+        static SLogTool() => GenericPool<SLogTool>.CreatePool(actionOnRelease: uLogTool =>
+        {
+            uLogTool.DefaultTags = null;
+            uLogTool.Parent = null;
+        });
+
+        public static SLogTool Create() => GenericPool<SLogTool>.Get();
+
+        public static SLogTool Create(string[] defaultTags)
+        {
+            var uLogTool = GenericPool<SLogTool>.Get();
+            uLogTool.DefaultTags = defaultTags;
+            return uLogTool;
+        }
+
+        public static SLogTool Create(ILogTool parent)
+        {
+            var uLogTool = GenericPool<SLogTool>.Get();
+            uLogTool.Parent = parent;
+            return uLogTool;
+        }
+
+        public static SLogTool Create(string[] defaultTags, ILogTool parent)
+        {
+            var uLogTool = GenericPool<SLogTool>.Get();
+            uLogTool.DefaultTags = defaultTags;
+            uLogTool.Parent = parent;
+            return uLogTool;
+        }
+
+        public static void Release(ref SLogTool? sLogTool)
+        {
+            if(sLogTool == null) return;
+            GenericPool<SLogTool>.Release(sLogTool);
+            sLogTool = null;
+        }
+        
+        [Obsolete("请使用SLogTool.Create()创建对象！")]
         public SLogTool()
         {
         }
 
+        [Obsolete("请使用SLogTool.Create()创建对象！")]
         public SLogTool(string[] defaultTags)
         {
             DefaultTags = defaultTags;
             Parent = default;
         }
 
+        [Obsolete("请使用SLogTool.Create()创建对象！")]
         public SLogTool(ILogTool parent)
         {
             DefaultTags = default;
             Parent = parent;
         }
 
+        [Obsolete("请使用SLogTool.Create()创建对象！")]
         public SLogTool(string[] defaultTags, ILogTool parent)
         {
             DefaultTags = defaultTags;

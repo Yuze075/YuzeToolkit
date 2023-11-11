@@ -8,22 +8,22 @@ namespace YuzeToolkit
     {
         #region Log
 
-        private ULogTool? _uLogTool;
+        private string[]? _logTags;
+        private string[]? LogTags => _logTags ??= GetLogTags;
 
-        protected ULogTool LogTool =>
-            _uLogTool ??= new ULogTool(new[] { nameof(SoBase), GetType().FullName }, this);
+        protected virtual string[]? GetLogTags => null;
 
         public void Log<T>(T message, ELogType logType = ELogType.Log, params string[] tags) =>
-            LogTool.Log(message, logType, tags);
+            LogSys.Log(message, logType, this, LogTags.ArrayMerge(tags));
 
         public Exception ThrowException(Exception exception, params string[] tags) =>
-            LogTool.ThrowException(exception, tags);
+            exception.ThrowException(this, LogTags.ArrayMerge(tags));
 
         public T IsNotNull<T>(T? isNotNull, string? name = null, string? message = null, bool additionalCheck = true) =>
-            LogTool.IsNotNull(isNotNull, name, message, additionalCheck);
+            isNotNull.IsNotNull(name, message, this, additionalCheck);
 
         public TCastTo IsNotNull<TCastTo>(object? isNotNull, string? name = null, string? message = null,
-            bool additionalCheck = false) => LogTool.IsNotNull<TCastTo>(isNotNull, name, message, additionalCheck);
+            bool additionalCheck = false) => isNotNull.IsNotNull<TCastTo>(name, message, this, additionalCheck);
 
         #endregion
     }

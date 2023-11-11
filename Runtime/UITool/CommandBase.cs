@@ -11,7 +11,7 @@ namespace YuzeToolkit.UITool
 
     /// <summary>
     /// 命令接口的接口，可以封装各种命令，用于调用和处理逻辑（此命令带有返回值）<br/>
-    /// 通常命令用于处理相关<see cref="IController"/>到<see cref="IModel"/>的各种操控逻辑
+    /// 通常命令用于处理相关<see cref="IUIController"/>到<see cref="IUIModel"/>的各种操控逻辑
     /// </summary>
     public interface ICommand<out TResult> : ICanSendEvent, ICanSendCommand, ICanGetModel, ICanGetUtility
     {
@@ -22,7 +22,7 @@ namespace YuzeToolkit.UITool
     public abstract class CommandBase : ICommand<Empty>
     {
         private IUICore? _core;
-        IUICore IBelongUICore.Core => LogSys.IsNotNull(_core, message: $"CommandType: {GetType()}");
+        IUICore IBelongUICore.Core => _core.IsNotNull(message: $"CommandType: {GetType()}");
         public void SetCore(IUICore core) => _core = core;
 
         Empty ICommand<Empty>.Execute()
@@ -38,9 +38,8 @@ namespace YuzeToolkit.UITool
     public abstract class CommandBase<TResult> : ICommand<TResult>
     {
         private IUICore? _core;
-        IUICore IBelongUICore.Core => LogSys.IsNotNull(_core, message: $"CommandType: {GetType()}");
+        IUICore IBelongUICore.Core => _core.IsNotNull(message: $"CommandType: {GetType()}");
         public void SetCore(IUICore core) => _core = core;
-
         TResult ICommand<TResult>.Execute() => Execute();
         protected abstract TResult Execute();
     }

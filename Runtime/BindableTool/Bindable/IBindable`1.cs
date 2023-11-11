@@ -30,4 +30,6 @@ namespace YuzeToolkit.BindableTool
     }
 
     public delegate void ValueChange<in TValue>(TValue? oldValue, TValue? newValue);
+    public delegate IDisposable RegisterChange<out TValue>(ValueChange<TValue> valueChange);
+    public delegate IDisposable RegisterChangeBuff<out TValue>(ValueChange<TValue> valueChange);
 }

@@ -4,7 +4,7 @@ namespace YuzeToolkit.DataTool
 {
     public interface IValueRegister
     {
-        void AddValue<TValue>(TValue value);
-        void AddValue<TValue>(IEnumerable<TValue> values);
+        void RegisterValue<TValue>(TValue value);
+        void RegisterValues<TValue>(IEnumerable<TValue> values);
     }
 }

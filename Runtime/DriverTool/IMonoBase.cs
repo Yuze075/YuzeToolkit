@@ -11,12 +11,12 @@
         /// <summary>
         /// 更新类型, 在不同Unity的更新顺序中更新
         /// </summary>
-        OrderType Type => OrderType.After;
+        OrderType Type { get; }
 
         /// <summary>
         /// 更新优先级, 越小越早更新
         /// </summary>
-        int Priority => 0;
+        int UpdatePriority  { get; }
     }
 
     /// <summary>

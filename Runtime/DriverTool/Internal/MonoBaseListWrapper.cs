@@ -7,6 +7,8 @@ namespace YuzeToolkit.DriverTool
     /// </summary>
     internal readonly struct MonoBaseWrapperList<T> where T : class, IMonoBase
     {
+        public static readonly IComparer<MonoBaseWrapperList<T>> Comparer = new ListComparer();
+
         /// <summary>
         /// 用于封装<see cref="MonoBase"/>的结构体
         /// </summary>
@@ -24,7 +26,7 @@ namespace YuzeToolkit.DriverTool
             }
 
             public bool IsNull;
-            public T MonoBase;
+            public T? MonoBase;
             private readonly Stack<int> _nullStack;
 
 
@@ -48,15 +50,6 @@ namespace YuzeToolkit.DriverTool
             }
         }
 
-        public struct Comparer : IComparer<MonoBaseWrapperList<T>>
-        {
-            public int Compare(MonoBaseWrapperList<T> x, MonoBaseWrapperList<T> y)
-            {
-                if (x._priority == y._priority) return 0;
-                if (x._priority > y._priority) return 1;
-                return -1;
-            }
-        }
 
         public MonoBaseWrapperList(int priority, int capacity)
         {
@@ -68,8 +61,8 @@ namespace YuzeToolkit.DriverTool
         public MonoBaseWrapperList(int priority)
         {
             _priority = priority;
-            Wrappers = null;
-            _nullStack = null;
+            Wrappers = null!;
+            _nullStack = null!;
         }
 
         public readonly List<MonoBaseWrapper> Wrappers;
@@ -98,5 +91,19 @@ namespace YuzeToolkit.DriverTool
             Wrappers.Add(wrapper);
             return Wrappers.Count - 1;
         }
+
+        #region Struct
+
+        private class ListComparer : IComparer<MonoBaseWrapperList<T>>
+        {
+            public int Compare(MonoBaseWrapperList<T> x, MonoBaseWrapperList<T> y)
+            {
+                if (x._priority == y._priority) return 0;
+                if (x._priority > y._priority) return 1;
+                return -1;
+            }
+        }
+
+        #endregion
     }
 }

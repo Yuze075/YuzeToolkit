@@ -17,7 +17,7 @@ namespace YuzeToolkit.LogTool
     /// </summary>
     public interface ILogTool
     {
-        void Log<T>(T message, ELogType logType, params string[] tags);
+        void Log<T>(T message, ELogType logType = ELogType.Log, params string[] tags);
         Exception ThrowException(Exception exception, params string[] tags);
 
         T IsNotNull<T>(T? isNotNull, string? name = null, string? message = null, bool additionalCheck = true);

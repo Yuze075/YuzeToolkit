@@ -1,21 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using YuzeToolkit.DriverTool;
-using YuzeToolkit.InspectorTool;
+using System.Threading;
 using YuzeToolkit.IoCTool;
 using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DataTool
 {
-    public abstract class DataManager : MonoBase, IValueRegister
+    public abstract class DataManager : Container, IValueRegister
     {
         #region Static
 
         private static DataManager? instance;
 
-        public static DataManager Instance => LogSys.IsNotNull(instance);
+        public static DataManager Instance => instance.IsNotNull();
 
         public static IData<TValue>? SGetValueData<TValue>() =>
             Instance.GetValueData<TValue>();
@@ -23,10 +20,10 @@ namespace YuzeToolkit.DataTool
         public static bool STryGetValueData<TValue>(out IData<TValue> data) =>
             Instance.TryGetValueData(out data);
 
-        public static TData? SGetData<TData>() =>
+        public static TData? SGetData<TData>() where TData : IData =>
             Instance.GetData<TData>();
 
-        public static bool STryGetData<TData>(out TData data) =>
+        public static bool STryGetData<TData>(out TData data) where TData : IData =>
             Instance.TryGetData(out data);
 
         public static int SGetIndex<TValue>(TValue value) => Instance.GetIndex(value);
@@ -44,212 +41,91 @@ namespace YuzeToolkit.DataTool
             out TValue value) => Instance.TryGetValueByIndex(index, idHashCode, out value);
 
         #endregion
-        
-        [IgnoreParent] [SerializeField] private ShowDictionary<Type, IData> datas = new();
-        private Action<IContainerBuilder>? _addBuilder;
 
-        private void Awake()
+        protected override void Awake()
         {
+            base.Awake();
+            if (instance != null)
+                Log($"已经存在对应的{nameof(DataManager)}！", ELogType.Error);
+
             instance = this;
         }
 
         protected override void OnDestroy()
         {
-            instance = null;
+            if (instance == this)
+                instance = null;
             base.OnDestroy();
         }
 
-        public void Configure(IContainerBuilder builder) => _addBuilder?.Invoke(builder);
-
 #if USE_UNITASK
-        public async Cysharp.Threading.Tasks.UniTask Init()
-        {
-            DoRegisterDatas();
-            await DoAddValues();
-        }
+        public Cysharp.Threading.Tasks.UniTask InitData(CancellationToken token) => DoInitData(this, token);
+        public Cysharp.Threading.Tasks.UniTask InitData() => InitData(destroyCancellationToken);
 #else
-        public System.Collections.IEnumerator Init()
+        public System.Collections.IEnumerator InitData()
         {
-            DoRegisterDatas();
-            yield return StartCoroutine(DoAddValues());
+            yield return StartCoroutine(DoInitData(this));
         }
 #endif
 
-        protected abstract void DoRegisterDatas();
-
 #if USE_UNITASK
-        protected abstract Cysharp.Threading.Tasks.UniTask DoAddValues();
+#pragma warning disable CS1998 // 异步方法缺少 "await" 运算符，将以同步方式运行
+        protected virtual async Cysharp.Threading.Tasks.UniTask DoInitData(IValueRegister valueRegister,
+            CancellationToken token)
+#pragma warning restore CS1998 // 异步方法缺少 "await" 运算符，将以同步方式运行
+        {
+        }
 #else
-        protected abstract System.Collections.IEnumerator DoAddValues();
+        protected virtual System.Collections.IEnumerator DoInitData(IValueRegister valueRegister)
+        {
+            yield return null;
+        }
 #endif
 
         #region IValueRegister
 
-        void IValueRegister.AddValue<TValue>(TValue value) => AddValue(value);
-
-        void IValueRegister.AddValue<TValue>(IEnumerable<TValue> values) =>
-            AddValue(values);
-
-        #endregion
-
-        #region Protected
-
-        protected void RegisterData<TData, TValue>(TData data)
-            where TData : IData<TValue>
+        void IValueRegister.RegisterValue<TValue>(TValue value)
         {
-            data.Parent = this;
-            datas.Add(typeof(TData), data);
-            datas.Add(typeof(IData<TValue>), data);
-            _addBuilder += builder => builder.Register(data).As<IData<TValue>>();
+            if (TryGet<IData<TValue>>(out var data)) data.RegisterValue(value);
+            if (value is IRegisterOtherValues registerOtherValues) registerOtherValues.DoRegister(this);
         }
 
-        protected void RegisterData<TData, TValue, TId>(TData data)
-            where TData : Data<TValue, TId> where TValue : IModel<TId>
+        void IValueRegister.RegisterValues<TValue>(IEnumerable<TValue> values)
         {
-            ((IData)data).Parent = this;
-            datas.Add(typeof(TData), data);
-            datas.Add(typeof(IData<TValue>), data);
-            datas.Add(typeof(Data<TValue, TId>), data);
-            _addBuilder += builder => builder.Register(data).As<Data<TValue, TId>, IData<TValue>>();
-        }
-
-        protected void RegisterData<TData, TValue>()
-            where TData : IData<TValue>, new()
-        {
-            var data = new TData { Parent = this };
-            datas.Add(typeof(TData), data);
-            datas.Add(typeof(IData<TValue>), data);
-            _addBuilder += builder => builder.Register(data).As<IData<TValue>>();
-        }
-
-        protected void RegisterData<TData, TValue, TId>()
-            where TData : Data<TValue, TId>, new() where TValue : IModel<TId>
-        {
-            var data = new TData();
-            ((IData)data).Parent = this;
-            datas.Add(typeof(TData), data);
-            datas.Add(typeof(IData<TValue>), data);
-            datas.Add(typeof(Data<TValue, TId>), data);
-            _addBuilder += builder => builder.Register(data).As<Data<TValue, TId>, IData<TValue>>();
-        }
-
-        protected void AddValue<TValue>(TValue value)
-        {
-            if (datas.TryGetValue(typeof(IData<TValue>), out var data))
-            {
-                var tData = (IData<TValue>)data;
-                tData.AddData(value);
-            }
-
-            if (value is IRegisterOtherValues registerOtherValues)
-            {
-                registerOtherValues.DoRegister(this);
-            }
-        }
-
-        protected void AddValue<TValue>(IEnumerable<TValue> values)
-        {
-            var readOnlyList =
+            var readOnlyValues =
                 values as IReadOnlyList<TValue> ?? values.ToArray();
 
-            if (datas.TryGetValue(typeof(IData<TValue>), out var data))
-            {
-                var tData = (IData<TValue>)data;
-                tData.AddData(readOnlyList);
-            }
-
-            foreach (var registerOtherValues in readOnlyList.OfType<IRegisterOtherValues>())
-            {
+            if (TryGet<IData<TValue>>(out var data)) data.RegisterValues(readOnlyValues);
+            foreach (var registerOtherValues in readOnlyValues.OfType<IRegisterOtherValues>())
                 registerOtherValues.DoRegister(this);
-            }
-        }
-
-        protected void AddValue<TBase, TValue>(IEnumerable<TValue> values) where TValue : TBase
-        {
-            var readOnlyList = values.OfType<TBase>().ToArray();
-
-            if (datas.TryGetValue(typeof(IData<TBase>), out var data))
-            {
-                var tData = (IData<TBase>)data;
-                tData.AddData(readOnlyList);
-            }
-
-            foreach (var registerOtherValues in readOnlyList.OfType<IRegisterOtherValues>())
-            {
-                registerOtherValues.DoRegister(this);
-            }
         }
 
         #endregion
 
         #region Public
 
-        public TData? GetData<TData>()
-        {
-            if (!datas.TryGetValue(typeof(TData), out var data))
-            {
-                Log($"无法找到对应Value{typeof(TData)}的Data!", ELogType.Warning);
-                return default;
-            }
+        public TData? GetData<TData>() where TData : IData => Get<TData>();
+        public bool TryGetData<TData>(out TData data) where TData : IData => TryGet(out data);
+        public IData<TValue>? GetValueData<TValue>() => Get<IData<TValue>>();
+        public bool TryGetValueData<TValue>(out IData<TValue> data) => TryGet(out data);
 
-            return (TData)data;
-        }
+        public int GetIndex<TValue>(TValue value) => GetValueData<TValue>()?.GetIndex(value) ?? -1;
+        public int GetIndex<TValue, TId>(TId id) => GetValueData<TValue>()?.GetIndex(id) ?? -1;
 
-        public bool TryGetData<TData>(out TData data)
-        {
-            if (!datas.TryGetValue(typeof(TData), out var data1))
-            {
-                Log($"无法找到对应Value{typeof(TData)}的Data!", ELogType.Warning);
-                data = default!;
-                return false;
-            }
-
-            data = (TData)data1;
-            return true;
-        }
-
-        public IData<TValue>? GetValueData<TValue>()
-        {
-            if (!datas.TryGetValue(typeof(IData<TValue>), out var data))
-            {
-                Log($"无法找到对应Value{typeof(IData<TValue>)}的Data!", ELogType.Warning);
-                return default;
-            }
-
-            return (IData<TValue>)data;
-        }
-
-        public bool TryGetValueData<TValue>(out IData<TValue> data)
-        {
-            if (!datas.TryGetValue(typeof(IData<TValue>), out var data1))
-            {
-                Log($"无法找到对应Value{typeof(IData<TValue>)}的Data!", ELogType.Warning);
-                data = default!;
-                return false;
-            }
-
-            data = (IData<TValue>)data1;
-            return true;
-        }
-
-        public int GetIndex<TValue>(TValue value) =>
-            TryGetValueData<TValue>(out var data) ? data.GetIndex(value) : -1;
-
-        public TValue? GetValue<TValue, TId>(TId id) =>
-            TryGetValueData<TValue>(out var data) ? data.Get(id) : default!;
+        public TValue? GetValue<TValue, TId>(TId id) => TryGetValueData<TValue>(out var data) ? data.Get(id) : default;
 
         public bool TryGetValue<TValue, TId>(TId id, out TValue value)
         {
             if (TryGetValueData<TValue>(out var data))
                 return data.TryGet(id, out value);
+
             value = default!;
             return false;
         }
 
-        public TValue? GetValueByIndex<TValue>(int index, int idHashCode) =>
-            TryGetValueData<TValue>(out var data)
-                ? data.GetByIndex(index, idHashCode)
-                : default!;
+        public TValue? GetValueByIndex<TValue>(int index, int idHashCode) => TryGetValueData<TValue>(out var data)
+            ? data.GetByIndex(index, idHashCode)
+            : default!;
 
         public bool TryGetValueByIndex<TValue>(int index, int idHashCode, out TValue value)
         {

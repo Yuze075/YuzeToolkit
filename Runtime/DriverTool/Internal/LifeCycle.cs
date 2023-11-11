@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using YuzeToolkit.LogTool;
+using YuzeToolkit.PoolTool;
 
 namespace YuzeToolkit.DriverTool
 {
-    internal abstract class LifeCycleBase : IDisposable
+    internal abstract class LifeCycleBase : IDisposable // todo 做一个内存池缓存所以的LifeCycleBase
     {
         public void Dispose()
         {
@@ -37,7 +38,7 @@ namespace YuzeToolkit.DriverTool
             var index = updateCycle.Index;
             if (index == -1) return;
 
-            var list = LogSys.IsNotNull(updateCycle.Wrappers, "updateCycle.Wrappers");
+            var list = updateCycle.Wrappers.IsNotNull("updateCycle.Wrappers");
             var wrapper = list[index];
             wrapper.Dispose(index);
             list[index] = wrapper;
@@ -52,7 +53,7 @@ namespace YuzeToolkit.DriverTool
             var index = fixedUpdateCycle.Index;
             if (index == -1) return;
 
-            var list = LogSys.IsNotNull(fixedUpdateCycle.Wrappers, "fixedUpdateCycle.Wrappers");
+            var list = fixedUpdateCycle.Wrappers.IsNotNull("fixedUpdateCycle.Wrappers");
             var wrapper = list[index];
             wrapper.Dispose(index);
             list[index] = wrapper;
@@ -66,7 +67,7 @@ namespace YuzeToolkit.DriverTool
             var index = lateUpdateCycle.Index;
             if (index == -1) return;
 
-            var list = LogSys.IsNotNull(lateUpdateCycle.Wrappers, "lateUpdateCycle.Wrappers");
+            var list = lateUpdateCycle.Wrappers.IsNotNull("lateUpdateCycle.Wrappers");
             var wrapper = list[index];
             wrapper.Dispose(index);
             list[index] = wrapper;
@@ -163,11 +164,20 @@ namespace YuzeToolkit.DriverTool
 
         private class UFLCycle : LifeCycleBase, IUpdateCycle, IFixedUpdateCycle, ILateUpdateCycle
         {
+            public UFLCycle()
+            {
+            }
+
             public UFLCycle(IMonoBase monoBase)
             {
                 Update = (IUpdate)monoBase;
                 FixedUpdate = (IFixedUpdate)monoBase;
                 LateUpdate = (ILateUpdate)monoBase;
+            }
+
+            static UFLCycle()
+            {
+                GenericPool<UFLCycle>.CreatePool(actionOnRelease: uflCycle => { uflCycle.FixedUpdate = null; });
             }
 
             IList<MonoBaseWrapperList<IUpdate>.MonoBaseWrapper>? IUpdateCycle.Wrappers { get; set; }

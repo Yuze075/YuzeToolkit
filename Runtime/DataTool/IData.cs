@@ -1,13 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DataTool
 {
-    public interface IData
+    public interface IData : IDisposable
     {
-        TGetValue? Get<TGetValue, TGetId>(TGetId getId);
-        bool TryGet<TGetValue, TGetId>(TGetId getId, out TGetValue getValue);
-        internal ILogTool Parent { set; }
+        void Clear();
+        ILogTool Parent { set; }
     }
 
     public interface IData<TValue> : IData
@@ -19,8 +19,7 @@ namespace YuzeToolkit.DataTool
         int GetIndex<TGetId>(TGetId getId);
         TValue? GetByIndex(int index, int idHashCode);
         bool TryGetByIndex(int index, int idHashCode, out TValue value);
-        internal void AddData(TValue value);
-        internal void AddData(IEnumerable<TValue> values);
-        internal void Clear();
+        internal void RegisterValue(TValue value);
+        internal void RegisterValues(IEnumerable<TValue> values);
     }
 }

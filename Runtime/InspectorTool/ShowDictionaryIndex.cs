@@ -24,7 +24,10 @@ namespace YuzeToolkit.InspectorTool
         }
 
 #if UNITY_EDITOR
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [IgnoreParent] [SerializeField]
+        [LabelByParent]
+        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)]
+        [IgnoreParent]
+        [SerializeField]
         private List<ShowKeyValuePair> showList;
 #endif
         private Dictionary<TKey, int>? _valuesIndex;

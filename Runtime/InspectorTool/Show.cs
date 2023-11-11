@@ -9,7 +9,7 @@ namespace YuzeToolkit.InspectorTool
         public Show(T? value) : this()
         {
 #if UNITY_EDITOR
-            _showValue = IShowValue.GetShowValue(value, "Value");
+            _showValue = IShowValue.GetShowValue(value,2);
 #endif
             _value = value;
         }
@@ -26,7 +26,7 @@ namespace YuzeToolkit.InspectorTool
             set
             {
 #if UNITY_EDITOR
-                _showValue = IShowValue.GetShowValue(value, "Value");
+                _showValue = IShowValue.GetShowValue(value,2);
 #endif
                 _value = value;
             }

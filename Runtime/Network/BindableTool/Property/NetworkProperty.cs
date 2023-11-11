@@ -27,14 +27,14 @@ namespace YuzeToolkit.Network.BindableTool
 
         private SLogTool? _sLogTool;
         private IModifiableOwner? _owner;
-
-        private SLogTool LogTool => _sLogTool ??= new SLogTool(new[]
+        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
+        protected virtual string[] GetLogTags => new[]
         {
             nameof(IProperty<TValue>),
             GetType().FullName
-        });
+        };
 
-        void IBindable.SetLogParent(ILogTool value) => LogTool.Parent = value;
+        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
 
         IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
 
@@ -102,11 +102,9 @@ namespace YuzeToolkit.Network.BindableTool
 
             modifyProperty.Init(new UnRegister(() =>
             {
-                if (modifyProperties.Remove(modifyProperty))
-                    ReCheckValue();
+                if (modifyProperties.Remove(modifyProperty)) ReCheckValue();
             }), this);
             ReCheckValue();
-            _disposeGroup.Add(modifyProperty);
             return modifyProperty;
         }
 
@@ -187,7 +185,7 @@ namespace YuzeToolkit.Network.BindableTool
         public IDisposable RegisterChange(ValueChange<TValue> valueChange)
         {
             _valueChange += valueChange;
-            return _disposeGroup.UnRegister(() => { _valueChange -= valueChange; });
+            return  new UnRegister(() => { _valueChange -= valueChange; });
         }
 
         public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
@@ -199,13 +197,13 @@ namespace YuzeToolkit.Network.BindableTool
         #endregion
 
         #region IDisposable
-
-        private DisposeGroup _disposeGroup;
-
+        
         void IDisposable.Dispose()
         {
+            SLogTool.Release(ref _sLogTool);
             Value = valueBase;
-            _disposeGroup.Dispose();
+            modifyProperties.Clear();
+            _valueChange = null;
         }
 
         #endregion
