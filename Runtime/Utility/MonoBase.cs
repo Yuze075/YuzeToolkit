@@ -1,13 +1,17 @@
+#nullable enable
 using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 using YuzeToolkit.DriverTool;
 using YuzeToolkit.LogTool;
+using UnityComponent = UnityEngine.Component;
 
 namespace YuzeToolkit
 {
-    public abstract class MonoBase : MonoBehaviour, IDisposable, ILogTool, IMonoBase
+    public abstract class MonoBase : MonoBehaviour, ILogging, IMonoBase
     {
-        public virtual OrderType Type => OrderType.Before;
+        public virtual EOrderType Type => EOrderType.Before;
         public virtual int UpdatePriority => 0;
 
         #region IDisposable
@@ -15,31 +19,15 @@ namespace YuzeToolkit
         /// <summary>
         /// 在OnDestroy的时候会销毁一次(也只能销毁一次
         /// </summary>
-        protected DisposeGroup DisposeGroup;
+        private DisposeGroup _disposeGroup;
 
         private bool _isDisposed;
 
-        public void AddDispose(IDisposable? disposable) => DisposeGroup.Add(disposable);
-
-        public IDisposable UnRegister(Action action) => DisposeGroup.UnRegister(action);
+        public void AddDispose(IDisposable? disposable) => _disposeGroup.Add(disposable);
 
         protected virtual void OnDestroy()
         {
-            if (!_isDisposed)
-                DoDispose();
-        }
-
-        void IDisposable.Dispose()
-        {
-            if (_isDisposed) return;
-            _isDisposed = true;
-            Destroy(this);
-            DoDispose();
-        }
-
-        protected virtual void DoDispose()
-        {
-            DisposeGroup.Dispose();
+            _disposeGroup.Dispose();
         }
 
         #endregion
@@ -47,107 +35,175 @@ namespace YuzeToolkit
         #region GetComponent
 
 #if UNITY_EDITOR
-        public new Component? GetComponent(string type) => base.GetComponent(type);
-        public new Component? GetComponent(Type type) => base.GetComponent(type);
+        public new UnityComponent? GetComponent(string type) => base.GetComponent(type);
+        public new UnityComponent? GetComponent(Type type) => base.GetComponent(type);
         public new T? GetComponent<T>() => base.GetComponent<T>();
 
-        public new Component? GetComponentInParent(Type type, bool includeInactive) =>
+        public new bool TryGetComponent<T>([MaybeNullWhen(false)] out T value) => base.TryGetComponent(out value);
+
+        public new bool TryGetComponent(Type type, [MaybeNullWhen(false)] out UnityComponent value) =>
+            base.TryGetComponent(type, out value);
+
+        public new UnityComponent? GetComponentInParent(Type type, bool includeInactive) =>
             base.GetComponentInParent(type, includeInactive);
 
-        public new Component? GetComponentInParent(Type type) => base.GetComponentInParent(type);
+        public new UnityComponent? GetComponentInParent(Type type) => base.GetComponentInParent(type);
         public new T? GetComponentInParent<T>(bool includeInactive) => base.GetComponentInParent<T>(includeInactive);
         public new T? GetComponentInParent<T>() => base.GetComponentInParent<T>();
 
-        public new Component? GetComponentInChildren(Type type, bool includeInactive) =>
+        public new UnityComponent? GetComponentInChildren(Type type, bool includeInactive) =>
             base.GetComponentInChildren(type, includeInactive);
 
-        public new Component? GetComponentInChildren(Type type) => base.GetComponentInChildren(type);
+        public new UnityComponent? GetComponentInChildren(Type type) => base.GetComponentInChildren(type);
 
         public new T? GetComponentInChildren<T>(bool includeInactive) =>
             base.GetComponentInChildren<T>(includeInactive);
 
-        public new T? GetComponentInChildren<T>() => base.GetComponentInParent<T>();
+        public new T? GetComponentInChildren<T>() => base.GetComponentInChildren<T>();
 #endif
 
         #endregion
 
         #region Log
 
-        private string[]? _logTags;
-        private string[]? LogTags => _logTags ??= GetLogTags;
+        private string[]? _tags;
+        public string[] Tags => _tags ??= GetLogTags;
+        protected virtual string[] GetLogTags => Array.Empty<string>();
 
-        protected virtual string[]? GetLogTags => null;
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        // ReSharper disable once InconsistentNaming
+        public new void print(object message) => Log(message);
 
-        public void Log<T>(T message, ELogType logType = ELogType.Log, params string[] tags) =>
-            LogSys.Log(message, logType, this, LogTags.ArrayMerge(tags));
+#pragma warning disable CS0618 // 类型或成员已过时
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        void ILogging.Log(object? message, ELogType logType, string[]? tags) =>
+            LogSys.LogInternal(message, logType, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        public Exception ThrowException(Exception exception, params string[] tags) =>
-            exception.ThrowException(this, LogTags.ArrayMerge(tags));
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        void ILogging.Assert([DoesNotReturnIf(false)] bool isTrue,
+            string? name, string? message, string[]? tags) =>
+            LogSys.AssertInternal(isTrue, name, message, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        public T IsNotNull<T>(T? isNotNull, string? name = null, string? message = null, bool additionalCheck = true) =>
-            isNotNull.IsNotNull(name, message, this, additionalCheck);
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        public void Log(object? message) => LogSys.LogInternal(message, ELogType.Log, Tags
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+            , this
+#endif
+        );
 
-        public TCastTo IsNotNull<TCastTo>(object? isNotNull, string? name = null, string? message = null,
-            bool additionalCheck = false) => isNotNull.IsNotNull<TCastTo>(name, message, this, additionalCheck);
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        public void Log(object? message, string[]? tags) =>
+            LogSys.LogInternal(message, ELogType.Log, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        #endregion
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        public void LogWarning(object? message) =>
+            LogSys.LogInternal(message, ELogType.Warning, Tags
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        #region CustomLog
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        public void LogWarning(object? message, string[]? tags) =>
+            LogSys.LogInternal(message, ELogType.Warning, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        /// <summary>
-        /// 一个大的阶段的开始
-        /// </summary>
-        protected void LogStart(string message)
-        {
-            Log($"Start----{message}----Start");
-        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        [Conditional("YUZE_LOG_TOOL_ERROR")]
+        public void LogError(object? message) =>
+            LogSys.LogInternal(message, ELogType.Error, Tags
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        /// <summary>
-        /// 一个大的阶段的结束
-        /// </summary>
-        protected void LogEnd(string message)
-        {
-            Log($"End----{message}----End");
-        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        [Conditional("YUZE_LOG_TOOL_ERROR")]
+        public void LogError(object? message, string[]? tags) =>
+            LogSys.LogInternal(message, ELogType.Error, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        /// <summary>
-        /// 一个小阶段结束
-        /// </summary>
-        protected void LogComplete(string message)
-        {
-            Log($"Complete: {message}");
-        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public void Assert([DoesNotReturnIf(false)] bool isTrue,
+            string? name, string? message) =>
+            LogSys.AssertInternal(isTrue, name, message, Tags
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        /// <summary>
-        /// 创建一个重要对象
-        /// </summary>
-        protected void LogCreate(string message)
-        {
-            Log($"Create: {message}");
-        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public void Assert([DoesNotReturnIf(false)] bool isTrue,
+            string? name, string? message, string[]? tags) =>
+            LogSys.AssertInternal(isTrue, name, message, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        #endregion
 
-        #region GetNotNullComponent
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name) =>
+            LogSys.AssertInternal(isTrue, name, LogSys.C_IsNull, Tags
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
 
-        public T GetNotNullComponent<T>(string? name = null, string? message = null, bool additionalCheck = true) =>
-            IsNotNull(base.GetComponent<T>(), name, message, additionalCheck);
-
-        public T GetNotNullComponentInParent<T>(bool includeInactive, string? name = null, string? message = null,
-            bool additionalCheck = true) =>
-            IsNotNull(base.GetComponentInParent<T>(includeInactive), name, message, additionalCheck);
-
-        public T GetNotNullComponentInParent<T>(string? name = null, string? message = null,
-            bool additionalCheck = true) =>
-            IsNotNull(base.GetComponentInParent<T>(), name, message, additionalCheck);
-
-        public T GetNotNullComponentInChildren<T>(bool includeInactive, string? name = null, string? message = null,
-            bool additionalCheck = true) =>
-            IsNotNull(base.GetComponentInChildren<T>(includeInactive), name, message, additionalCheck);
-
-        public T GetNotNullComponentInChildren<T>(string? name = null, string? message = null,
-            bool additionalCheck = true) =>
-            IsNotNull(base.GetComponentInParent<T>(), name, message, additionalCheck);
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name, string[]? tags) =>
+            LogSys.AssertInternal(isTrue, name, LogSys.C_IsNull, Tags.Combine(tags)
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , this
+#endif
+            );
+#pragma warning restore CS0618 // 类型或成员已过时
 
         #endregion
 
@@ -157,13 +213,10 @@ namespace YuzeToolkit
         public static float FixedDeltaTime => IMonoBase.S_FixedDeltaTime;
         private IDisposable? _runDisposable;
 
-        protected virtual void OnEnable() => _runDisposable = this.Run();
+        private UpdateToken _updateToken;
+        protected virtual void OnEnable() => _updateToken = this.Run();
 
-        protected virtual void OnDisable()
-        {
-            _runDisposable?.Dispose();
-            _runDisposable = null;
-        }
+        protected virtual void OnDisable() => _updateToken.Dispose();
 
         #endregion
     }

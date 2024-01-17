@@ -1,4 +1,6 @@
-﻿using System;
+#nullable enable
+using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace YuzeToolkit.BindableTool
 {
@@ -20,13 +22,6 @@ namespace YuzeToolkit.BindableTool
         TValue Max { get; }
 
         /// <summary>
-        /// 使用一个<see cref="ModifyResource"/>修改<see cref="IResource{TValue}.Value"/>
-        /// </summary>
-        /// <param name="modifyResource">修改<see cref="IResource{TValue}"/>的接口</param>
-        /// <param name="reason"></param>
-        IDisposable Modify(ModifyResource modifyResource, IModifyReason reason);
-
-        /// <summary>
         /// 资源剩余是否支持这次修改<br/>
         /// 返回0：修改之后不会超出范围<br/>
         /// 返回1：修改之后超出最大值<br/>
@@ -37,15 +32,34 @@ namespace YuzeToolkit.BindableTool
         /// <summary>
         /// 注册超出最大值的事件，返回超出的值和最大值
         /// </summary>
-        IDisposable RegisterOutOfMaxRange(OutOfMaxRange<TValue> outOfMaxRange);
+        [return: NotNullIfNotNull("outOfMaxRange")]
+        IDisposable? RegisterOutOfMaxRange(OutOfMaxRange<TValue>? outOfMaxRange);
 
         /// <summary>
         /// 注册超出最小值的事件，返回超出的值和最小值
         /// </summary>
-        IDisposable RegisterOutOfMinRange(OutOfMinRange<TValue> outOfMinRange);
+        [return: NotNullIfNotNull("outOfMinRange")]
+        IDisposable? RegisterOutOfMinRange(OutOfMinRange<TValue>? outOfMinRange);
     }
+    
+    /// <summary>
+    /// 用于判断是否<see cref="IResource{TValue}"/>中资源是否足够
+    /// </summary>
+    public enum EEnoughType
+    {
+        /// <summary>
+        /// 超出最小值
+        /// </summary>
+        OutOfMinRange,
 
-    public delegate void OutOfMaxRange<in TValue>(TValue maxValue, float outMaxValue);
+        /// <summary>
+        /// 足够
+        /// </summary>
+        IsEnough,
 
-    public delegate void OutOfMinRange<in TValue>(TValue minValue, float outMinValue);
+        /// <summary>
+        /// 超出最大值
+        /// </summary>
+        OutOfMaxRange
+    }
 }

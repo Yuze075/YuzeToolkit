@@ -1,10 +1,10 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     [CustomPropertyDrawer(typeof(AnimatorParamAttribute))]
     public class AnimatorParamDrawer : PropertyDrawer

@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.UITool
+#nullable enable
+namespace YuzeToolkit.UITool
 {
     /// <summary>
     /// <inheritdoc cref="IBelongUICore" />
@@ -6,7 +7,15 @@
     public abstract class UIBase : MonoBase, IBelongUICore
     {
         private IUICore? _core;
-        IUICore IBelongUICore.Core => IsNotNull(_core, message: $"Type: {GetType()}");
-        public void SetCore(IUICore core) => _core = core;
+
+        IUICore IBelongUICore.Core
+        {
+            get
+            {
+                IsNotNull(_core != null, nameof(_core));
+                return _core;
+            }
+            set => _core = value;
+        }
     }
 }

@@ -1,4 +1,4 @@
-#if !USE_EDITOR_TOOLBOX
+#if !YUZE_TOOLKIT_USE_EDITOR_TOOLBOX
 #if UNITY_2019_3_OR_NEWER
 using System;
 using System.Diagnostics;

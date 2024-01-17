@@ -1,5 +1,4 @@
-﻿using System;
-
+#nullable enable
 namespace YuzeToolkit.BindableTool
 {
     /// <summary>
@@ -7,8 +6,7 @@ namespace YuzeToolkit.BindableTool
     /// 用于可读字段, 特点方法可写字段<br/><br/>
     /// </summary>
     /// <typeparam name="TValue">数据类型</typeparam>
-    public interface IModifiableField<TValue> : IBindable<TValue>, IModifiable
+    public interface IModifiableField<out TValue> : IBindable<TValue>, IModifiable
     {
-        IDisposable Modify(ModifyField<TValue> modifyField, IModifyReason reason);
     }
 }

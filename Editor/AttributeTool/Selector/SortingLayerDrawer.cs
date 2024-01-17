@@ -1,15 +1,15 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     [CustomPropertyDrawer(typeof(SortingLayerAttribute))]
     public class SortingLayerDrawer : PropertyDrawer
     {
-        private static string[] Layers
+        private static string[]? Layers
         {
             get
             {
@@ -44,8 +44,9 @@ namespace YuzeToolkit.Editor.AttributeTool
 
 
         private static void DrawPropertyForString(Rect rect, SerializedProperty property, GUIContent label,
-            string[] layers)
+            string[]? layers)
         {
+            if (layers == null) return;
             var index = IndexOf(layers, property.stringValue);
             var newIndex = EditorGUI.Popup(rect, label.text, index, layers);
             var newLayer = layers[newIndex];
@@ -56,8 +57,9 @@ namespace YuzeToolkit.Editor.AttributeTool
         }
 
         private static void DrawPropertyForInt(Rect rect, SerializedProperty property, GUIContent label,
-            string[] layers)
+            string[]? layers)
         {
+            if (layers == null) return;
             var index = 0;
             var layerName = SortingLayer.IDToName(property.intValue);
             for (var i = 0; i < layers.Length; i++)

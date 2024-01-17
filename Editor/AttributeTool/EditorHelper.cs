@@ -1,11 +1,11 @@
+#nullable enable
 using System;
 using System.Collections;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     public static class EditorHelper
     {
@@ -164,7 +164,7 @@ namespace YuzeToolkit.Editor.AttributeTool
         /// 尝试获取和<see cref="SerializedProperty"/>同一层的value的值
         /// </summary>
         public static object? GetValue(this SerializedProperty? property, string? valueName) =>
-            property.GetPropertyOwnerObject().GetValue(valueName);
+            Helper.GetValue(property.GetPropertyOwnerObject(), valueName);
 
         /// <summary>
         /// 尝试获取<see cref="SerializedProperty"/>对应的值
@@ -177,7 +177,7 @@ namespace YuzeToolkit.Editor.AttributeTool
         /// 尝试去设置<see cref="SerializedProperty"/>同一层的value的值
         /// </summary>
         public static bool SetValue(this SerializedProperty? property, string? valueName, object? value) =>
-            property.GetPropertyOwnerObject().SetValue(valueName, value);
+            Helper.SetValue(property.GetPropertyOwnerObject(), valueName, value);
 
         public static void DrawWarningMessage(UnityEngine.Rect rect, string massage)
         {

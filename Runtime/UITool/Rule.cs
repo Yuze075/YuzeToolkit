@@ -1,4 +1,9 @@
-﻿using System;
+#nullable enable
+using System;
+using System.Diagnostics.CodeAnalysis;
+using UnityEngine;
+using YuzeToolkit.EventTool;
+using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.UITool
 {
@@ -7,7 +12,7 @@ namespace YuzeToolkit.UITool
     /// <see cref="ICommand{TResult}"/>会<see cref="IUIModel"/>进行操作；
     /// <see cref="IUIModel"/>通过Event想<see cref="IUIController"/>传递信息
     /// </summary>
-    public interface IUIModel : ICanSendEvent, ICanRegisterEvent, ICanGetModel, ICanGetUtility
+    public interface IUIModel : ICanSendEvent, ICanRegisterEvent, ICanGetNotNullModel, ICanGetNotNullUtility
     {
     }
 
@@ -36,8 +41,11 @@ namespace YuzeToolkit.UITool
     /// </summary>
     public interface IBelongUICore
     {
-        IUICore Core { get; }
-        void SetCore(IUICore core);
+        /// <summary>
+        /// 绑定的对应的<see cref="IUICore"/>核心, 默认都应该为显式接口实现<br/>
+        /// 默认不应该直接调用Get和Set方法(Get方法应该由Rule拓展方法调用, Set方法应该由依赖注入直接进行绑定)
+        /// </summary>
+        IUICore Core { get; set; }
     }
 
     public interface ICanSendCommand : IBelongUICore
@@ -55,8 +63,16 @@ namespace YuzeToolkit.UITool
     public interface ICanGetModel : IBelongUICore
     {
     }
+    
+    public interface ICanGetNotNullModel : ICanGetModel
+    {
+    }
 
     public interface ICanGetUtility : IBelongUICore
+    {
+    }
+    
+    public interface ICanGetNotNullUtility : ICanGetUtility
     {
     }
 
@@ -70,9 +86,18 @@ namespace YuzeToolkit.UITool
 
         public static TResult SendCommand<TResult>(this ICanSendCommand self, ICommand<TResult> command) =>
             self.Core.SendCommand(command);
-        
+
         public static void SendCommand(this ICanSendCommand self, ICommand<Empty> command) =>
             self.Core.SendCommand(command);
+
+        public static void SendEventAll<TBase, T>(this ICanSendEvent self) where T : TBase, new() =>
+            self.Core.SendEventAll<TBase, T>();
+
+        public static void SendEventAll<T>(this ICanSendEvent self) where T : new() =>
+            self.Core.SendEventAll<T>();
+
+        public static void SendEventAll<T>(this ICanSendEvent self, T eventValue) =>
+            self.Core.SendEventAll(eventValue);
 
         public static void SendEvent<TBase, T>(this ICanSendEvent self) where T : TBase, new() =>
             self.Core.SendEvent<TBase, T>();
@@ -83,30 +108,14 @@ namespace YuzeToolkit.UITool
         public static void SendEvent<T>(this ICanSendEvent self, T eventValue) =>
             self.Core.SendEvent(eventValue);
 
-        public static void SendEventOnce<TBase, T>(this ICanSendEvent self) where T : TBase, new() =>
-            self.Core.SendEvent<TBase, T>();
-
-        public static void SendEventOnce<T>(this ICanSendEvent self) where T : new() =>
-            self.Core.SendEvent<T>();
-
-        public static void SendEventOnce<T>(this ICanSendEvent self, T eventValue) =>
-            self.Core.SendEvent(eventValue);
-
-        public static IDisposable RegisterEvent<T>(this ICanRegisterEvent self, Action<T> onEvent) =>
+        [return: NotNullIfNotNull("onEvent")]
+        public static IDisposable? RegisterEvent<T>(this ICanRegisterEvent self, Action<T>? onEvent) =>
             self.Core.RegisterEvent(onEvent);
-        
+
         public static TModel? GetModel<TModel>(this ICanGetModel self) where TModel : IUIModel =>
             self.Core.GetModel<TModel>();
 
         public static TUtility? GetUtility<TUtility>(this ICanGetUtility self) where TUtility : IUIUtility =>
             self.Core.GetUtility<TUtility>();
-
-        public static TModel GetNotNullModel<TModel>(this ICanGetModel self, string? name = null,
-            string? message = null, bool additionalCheck = true) where TModel : IUIModel =>
-            self.Core.GetNotNullModel<TModel>(name, message, additionalCheck);
-
-        public static TUtility GetNotNullUtility<TUtility>(this ICanGetUtility self, string? name = null,
-            string? message = null, bool additionalCheck = true) where TUtility : IUIUtility  =>
-            self.Core.GetNotNullUtility<TUtility>(name, message, additionalCheck);
     }
 }

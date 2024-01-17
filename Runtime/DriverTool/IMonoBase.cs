@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.DriverTool
+#nullable enable
+namespace YuzeToolkit.DriverTool
 {
     /// <summary>
     /// 所有需要<see cref="MonoDriverBase"/>统一更新函数的接口
@@ -11,7 +12,7 @@
         /// <summary>
         /// 更新类型, 在不同Unity的更新顺序中更新
         /// </summary>
-        OrderType Type { get; }
+        EOrderType Type { get; }
 
         /// <summary>
         /// 更新优先级, 越小越早更新

@@ -1,37 +1,62 @@
-﻿using System;
-
+#nullable enable
 namespace YuzeToolkit.BindableTool
 {
     /// <summary>
-    /// <inheritdoc cref="AddModifyProperty" />
+    /// <inheritdoc cref="IModifiable" />
+    /// <br/><br/>
+    /// </summary>
+    public interface IProperty : IModifiable
+    {
+        /// <summary>
+        /// 当超出范围时的处理逻辑
+        /// </summary>
+        EOutOfRangeType OutOfRangeType { get; }
+        
+        /// <summary>
+        /// 移除绑定的<see cref="ModifyProperty"/>
+        /// </summary>
+        void RemoveModify(ModifyProperty modifyProperty);
+        
+        /// <summary>
+        /// 重新检测对应的属性修正
+        /// </summary>
+        void ReCheckValue();
+    }
+    
+    /// <summary>
+    /// <inheritdoc cref="IProperty" />
     /// 属性接口, 通过一个数值类型进行属性数值的管理<br/>
     /// 可以通过<see cref="MultModifyProperty"/>和<see cref="IProperty{TValue}"/>对<see cref="AddModifyProperty"/>的基础值进行修正<br/>
     /// 优先级越高越后修正, 在同一优先级先进行所有的<see cref="MultModifyProperty"/>修正, 再进行所有的<see cref="IModifiable"/>修正<br/><br/>
     /// </summary>
-    public interface IProperty<out TValue> : IModifiable, IBindable<TValue>
+    public interface IProperty<out TValue> : IProperty, IBindable<TValue>
     {
         /// <summary>
-        /// 注册一个<see cref="ModifyProperty"/>, 修饰<see cref="IProperty{TValue}"/>的状态值
-        /// </summary>
-        /// <param name="modifyProperty">修饰<see cref="IProperty{TValue}"/>的接口</param>
-        /// <param name="reason"></param>
-        /// <returns>返回<see cref="IDisposable"/>接口,
-        /// 调用<see cref="IDisposable.Dispose"/>方法解除对<see cref="IProperty{TValue}"/>状态的修饰</returns>
-        IDisposable Modify(ModifyProperty modifyProperty, IModifyReason reason);
-
-        /// <summary>
-        /// 数值范围, 超出范围的值会被修正为范围内值
+        /// 数值最小值
         /// </summary>
         TValue Min { get; }
 
         /// <summary>
-        /// 数值范围, 超出范围的值会被修正为范围内值
+        /// 数值最大值
         /// </summary>
         TValue Max { get; }
+    }
+    
+    public enum EOutOfRangeType
+    {
+        /// <summary>
+        /// 不做任何处理, 继续进行计算直到结束
+        /// </summary>
+        None,
 
         /// <summary>
-        /// 当一个优先级的数值结算完成之后判断一次范围, 如果超出范围就在这次优先级判断之后就返回
+        /// 当超出范围时, 直接停止返回超出范围的值
         /// </summary>
-        bool WhenOutOfRangeStop { get; }
+        Stop,
+
+        /// <summary>
+        /// 当超出范围时, 将当前值调整至范围内, 并继续进行计算
+        /// </summary>
+        Clamp
     }
 }

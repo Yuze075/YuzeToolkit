@@ -1,122 +1,103 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using YuzeToolkit.InspectorTool;
-using YuzeToolkit.LogTool;
+using System.Diagnostics.CodeAnalysis;
 
 namespace YuzeToolkit.BindableTool
 {
+#if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE && YUZE_BINDABLE_TOOL_USE_SHOW_VALUE
     [Serializable]
-    public class BindableSystem : IDisposable
+#endif
+    public sealed class BindableSystem : IDisposable, IBindableRegister
     {
-        #region UNITY_EDITOR
+        ~BindableSystem() => Dispose(false);
+        [NonSerialized] private bool _disposed;
 
-#if UNITY_EDITOR
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _fields = new();
-
-        // ReSharper disable once CollectionNeverQueried.Local
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _fieldLists = new();
-
-        // ReSharper disable once CollectionNeverQueried.Local
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _modifiableFields = new();
-
-        // ReSharper disable once CollectionNeverQueried.Local
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _properties = new();
-
-        // ReSharper disable once CollectionNeverQueried.Local
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _resources = new();
-
-        // ReSharper disable once CollectionNeverQueried.Local
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
-        private List<IBindable> _states = new();
-
-        private static readonly Type FieldType = typeof(IField<>);
-        private static readonly Type FieldListType = typeof(IFieldList<>);
-        private static readonly Type ModifiableFieldType = typeof(IModifiableField<>);
-        private static readonly Type PropertyType = typeof(IProperty<>);
-        private static readonly Type ResourceType = typeof(IResource<>);
-        private static readonly Type StateType = typeof(IState);
+#if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE && YUZE_BINDABLE_TOOL_USE_SHOW_VALUE
+        [UnityEngine.Title("总字典")] [UnityEngine.IgnoreParent] [UnityEngine.SerializeField]
+        private InspectorTool.ShowDictionary<Type, object> bindables;
+#else
+        private readonly Dictionary<Type, object> bindables = new();
 #endif
 
-        #endregion
-
-        public BindableSystem()
+        void IBindableRegister.AddBindable<T>(T bindable)
         {
-        }
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            var type = typeof(T);
 
-        public BindableSystem(ILogTool parent) => SetLogParent(parent);
-
-
-        [IgnoreParent] [SerializeField] private ShowDictionaryIndex<Type, IBindable> bindables = new();
-
-        public IReadOnlyList<IBindable> Bindables => bindables.Values;
-
-        private SLogTool? _sLogTool;
-        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
-
-        protected virtual string[] GetLogTags => new[] { nameof(BindableSystem) };
-
-        public void SetLogParent(ILogTool parent)=> ((SLogTool)LogTool).Parent = parent;
-        public IBindableRegister GetRegister(IModifiableOwner owner) => new BindableRegister(this, owner);
-
-        public void RegisterBindable(IBindable bindable, IModifiableOwner owner)
-        {
-            if (bindable is IModifiable modifiable) modifiable.SetOwner(owner);
-            RegisterBindable(bindable);
-        }
-
-        public void RegisterBindable(IBindable bindable)
-        {
-            var type = bindable.GetType();
-            if (bindables.ContainsKey(type))
+            // 不存在对应的IBindable, 直接添加到列表中
+            if (!bindables.TryGetValue(type, out var value))
             {
-                LogTool.Log($"已经存在{type}类型的{nameof(IBindable)}在{nameof(bindables)}中!", ELogType.Warning);
+                bindables.Add(type, bindable);
                 return;
             }
 
-#if UNITY_EDITOR
-            if (FieldType.IsAssignableFrom(type)) _fields.Add(bindable);
-            if (FieldListType.IsAssignableFrom(type)) _fieldLists.Add(bindable);
-            if (ModifiableFieldType.IsAssignableFrom(type)) _modifiableFields.Add(bindable);
-            if (PropertyType.IsAssignableFrom(type)) _properties.Add(bindable);
-            if (ResourceType.IsAssignableFrom(type)) _resources.Add(bindable);
-            if (StateType.IsAssignableFrom(type)) _states.Add(bindable);
-#endif
-            bindable.SetLogParent(LogTool);
-            bindables.Add(type, bindable);
+            // 如果已经为List<IBindable>, 则直接添加到列表中
+            if (value is List<IBindable> list)
+            {
+                list.Add(bindable);
+                return;
+            }
+
+            // 为单独的IBindable, 则创建一个新列表进行替换
+            bindables[type] = new List<IBindable>
+            {
+                (IBindable)value,
+                bindable
+            };
         }
 
-        /// <summary>
-        /// 对<see cref="IBindable"/>进行修正
-        /// </summary>
-        public IDisposable ModifyBindable(IModify modify, IModifyReason reason)
+        public bool RemoveBindable<T>(T bindable) where T : IBindable
         {
-            var type = modify.TryModifyType;
-            if (type == null)
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            var type = typeof(T);
+
+            if (!bindables.TryGetValue(type, out var value)) return false;
+
+            if (value is List<IBindable> list) return list.Remove(bindable);
+
+            if ((IBindable)value != (IBindable)bindable) return false;
+
+            bindables.Remove(type);
+            return true;
+        }
+
+
+        public IEnumerable<T> GetBindables<T>() where T : IBindable
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            var type = typeof(T);
+            if (!bindables.TryGetValue(type, out var value)) yield break;
+            if (value is List<IBindable> list)
             {
-                LogTool.Log($"传入的{modify}的{nameof(IModify.TryModifyType)}为空!", ELogType.Warning);
-                return modify;
+                foreach (var bindable in list) yield return (T)bindable;
+                yield break;
             }
 
-            if (!bindables.TryGetValue(type, out var bindable))
+            yield return (T)value;
+        }
+
+        public bool TryGetBindables<T>([MaybeNullWhen(false)] out T[] bindables) where T : IBindable
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            var type = typeof(T);
+            if (!this.bindables.TryGetValue(type, out var value))
             {
-                LogTool.Log($"不存在{type}类型的{nameof(IBindable)}在{nameof(bindables)}中!", ELogType.Warning);
-                return modify;
+                bindables = null;
+                return false;
             }
 
-            if (bindable is not IModifiable modifiable)
+            if (value is List<IBindable> list)
             {
-                LogTool.Log($"{type}类型不为{nameof(IModifiable)}, 无法进行修饰!", ELogType.Error);
-                return modify;
+                bindables = new T[list.Count];
+                var count = list.Count;
+                for (var index = 0; index < count; index++) bindables[index] = (T)list[index];
+                return true;
             }
 
-            return modifiable.Modify(modify, reason);
+            bindables = new T[1];
+            bindables[0] = (T)value;
+            return true;
         }
 
         /// <summary>
@@ -125,29 +106,37 @@ namespace YuzeToolkit.BindableTool
         public T? GetBindable<T>() where T : IBindable
         {
             var type = typeof(T);
-            if (!bindables.TryGetValue(type, out var bindable))
-            {
-                LogTool.Log($"不存在{type}类型的{nameof(IBindable)}在{nameof(bindables)}中!", ELogType.Warning);
-                return default;
-            }
+            if (!bindables.TryGetValue(type, out var value)) return default;
 
-            return (T)bindable;
+            if (value is List<IBindable> list) return list.Count == 0 ? default : (T)list[0];
+            return (T)value;
         }
 
         /// <summary>
         /// 尝试获取到<see cref="T"/>类型的<see cref="IBindable"/>
         /// </summary>
-        public bool TryGetBindable<T>(out T t) where T : IBindable
+        public bool TryGetBindable<T>([MaybeNullWhen(false)] out T t) where T : IBindable
         {
             var type = typeof(T);
-            if (!bindables.TryGetValue(type, out var bindable))
+            if (!bindables.TryGetValue(type, out var value))
             {
-                LogTool.Log($"不存在{type}类型的{nameof(IBindable)}在{nameof(bindables)}中!", ELogType.Warning);
-                t = default!;
+                t = default;
                 return false;
             }
 
-            t = (T)bindable;
+            if (value is List<IBindable> list)
+            {
+                if (list.Count == 0)
+                {
+                    t = default;
+                    return false;
+                }
+
+                t = (T)list[0];
+                return true;
+            }
+
+            t = (T)value;
             return true;
         }
 
@@ -156,34 +145,34 @@ namespace YuzeToolkit.BindableTool
         /// </summary>
         public bool ContainsBindable<T>() where T : IBindable => bindables.ContainsKey(typeof(T));
 
-        /// <summary>
-        /// 重新检测所有的值
-        /// </summary>
-        public void ReCheckBindable()
-        {
-            foreach (var modifiable in bindables.Values.OfType<IModifiable>())
-            {
-                modifiable.ReCheckValue();
-            }
-        }
-
         #region IDisposable
+
         void IDisposable.Dispose()
         {
-            foreach (var bindable in Bindables) bindable.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool isDisposing)
+        {
+            if (_disposed) return;
+            if (isDisposing)
+                foreach (var value in bindables.Values)
+                {
+                    if (value is List<IBindable> bindables)
+                    {
+                        var count = bindables.Count;
+                        for (var index = 0; index < count; index++) bindables[index].Dispose();
+                        bindables.Clear();
+                    }
+
+                    ((IBindable)value).Dispose();
+                }
+
             bindables.Clear();
+            _disposed = true;
         }
 
         #endregion
-
-        private class BindableRegister : IBindableRegister
-        {
-            public BindableRegister(BindableSystem bindableSystem, IModifiableOwner owner) =>
-                (_bindableSystem, _owner) = (bindableSystem, owner);
-
-            private readonly BindableSystem _bindableSystem;
-            private readonly IModifiableOwner _owner;
-            void IBindableRegister.Register<T>(T bindable) => _bindableSystem.RegisterBindable(bindable, _owner);
-        }
     }
 }

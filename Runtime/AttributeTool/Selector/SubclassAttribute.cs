@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -35,7 +36,7 @@ namespace YuzeToolkit.AttributeTool
             : Array.Empty<string>();
 
 
-        public string TypeNameWithoutPath
+        public string? TypeNameWithoutPath
         {
             get
             {

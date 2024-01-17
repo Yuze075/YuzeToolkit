@@ -16,12 +16,12 @@
         {
             "name": "com.cysharp.unitask",
             "expression": "0.0.0",
-            "define": "USE_UNITASK"
+            "define": "YUZE_TOOLKIT_USE_UNITASK"
         },
         {
             "name": "com.browar.editor-toolbox",
             "expression": "0.0.0",
-            "define": "USE_EDITOR_TOOLBOX"
+            "define": "YUZE_TOOLKIT_USE_EDITOR_TOOLBOX"
         }
     ],
     "noEngineReferences": false

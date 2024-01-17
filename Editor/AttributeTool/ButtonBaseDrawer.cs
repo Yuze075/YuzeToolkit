@@ -1,10 +1,10 @@
-﻿using System.Linq;
+#nullable enable
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     [CustomPropertyDrawer(typeof(ButtonAttribute))]
     public class ButtonDrawer : PropertyDrawer

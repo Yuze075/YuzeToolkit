@@ -1,6 +1,10 @@
-﻿using System;
+#nullable enable
+using System;
+using System.Diagnostics.CodeAnalysis;
+using UnityEngine;
 using YuzeToolkit.EventTool;
 using YuzeToolkit.IoCTool;
+using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.UITool
 {
@@ -23,19 +27,14 @@ namespace YuzeToolkit.UITool
     /// Controller --Command--> Utility （访问外部逻辑）
     /// </code>
     /// </summary>
-    public interface IUICore : ICanEvents, IDisposable
+    public interface IUICore : IEventSystemOwner
     {
         TModel? GetModel<TModel>() where TModel : IUIModel;
         TUtility? GetUtility<TUtility>() where TUtility : IUIUtility;
+        bool TryGetModel<TModel>([MaybeNullWhen(false), NotNullWhen(true)] out TModel model) where TModel : IUIModel;
 
-        TModel GetNotNullModel<TModel>(string? name = null, string? message = null,
-            bool additionalCheck = true) where TModel : IUIModel;
-
-        TUtility GetNotNullUtility<TUtility>(string? name = null, string? message = null,
-            bool additionalCheck = true) where TUtility : IUIUtility;
-
-        bool TryGetModel<TModel>(out TModel model) where TModel : IUIModel;
-        bool TryGetUtility<TUtility>(out TUtility utility) where TUtility : IUIUtility;
+        bool TryGetUtility<TUtility>([MaybeNullWhen(false), NotNullWhen(true)] out TUtility utility)
+            where TUtility : IUIUtility;
 
         // ReSharper disable Unity.PerformanceAnalysis
         void SendCommand(ICommand<Empty> command);
@@ -51,30 +50,27 @@ namespace YuzeToolkit.UITool
         {
             base.Inject(tryInjectValue);
             if (tryInjectValue is not IBelongUICore belongUICore) return;
-            belongUICore.SetCore(this);
+            belongUICore.Core = this;
         }
 
-        TModel? IUICore.GetModel<TModel>() where TModel : default => Get<TModel>();
-        TUtility? IUICore.GetUtility<TUtility>() where TUtility : default => Get<TUtility>();
+        public TModel? GetModel<TModel>() where TModel : IUIModel => Get<TModel>();
+        public TUtility? GetUtility<TUtility>() where TUtility : IUIUtility => Get<TUtility>();
 
-        TModel IUICore.GetNotNullModel<TModel>(string? name, string? message, bool additionalCheck)
-            where TModel : default => IsNotNull(Get<TModel>(), name, message, additionalCheck);
+        public bool TryGetModel<TModel>([MaybeNullWhen(false), NotNullWhen(true)] out TModel model)
+            where TModel : IUIModel => TryGet(out model);
 
-        TUtility IUICore.GetNotNullUtility<TUtility>(string? name, string? message, bool additionalCheck)
-            where TUtility : default => IsNotNull(Get<TUtility>(), name, message, additionalCheck);
-
-        bool IUICore.TryGetModel<TModel>(out TModel model) => TryGet(out model);
-        bool IUICore.TryGetUtility<TUtility>(out TUtility utility) => TryGet(out utility);
+        public bool TryGetUtility<TUtility>([MaybeNullWhen(false), NotNullWhen(true)] out TUtility utility)
+            where TUtility : IUIUtility => TryGet(out utility);
 
         #region ICommand
 
-        void IUICore.SendCommand(ICommand<Empty> command)
+        public void SendCommand(ICommand<Empty> command)
         {
             Inject(command);
             ExecuteCommand(command);
         }
 
-        TResult IUICore.SendCommand<TResult>(ICommand<TResult> command)
+        public TResult SendCommand<TResult>(ICommand<TResult> command)
         {
             Inject(command);
             return ExecuteCommand(command);
@@ -89,27 +85,15 @@ namespace YuzeToolkit.UITool
 
         #region Event
 
-        private EventSystem? _events;
-        private EventSystem EventSystem => _events ?? new EventSystem(this);
-        public void SendEvent<TBase, T>() where T : TBase, new() => DoSendEvent<TBase>(new T());
-        public void SendEvent<T>() where T : new() => DoSendEvent(new T());
-        public void SendEvent<T>(T eventValue) => DoSendEvent(eventValue);
-        public void SendEventOnce<TBase, T>() where T : TBase, new() => DoSendEventOnce<TBase>(new T());
-        public void SendEventOnce<T>() where T : new() => DoSendEventOnce(new T());
-        public void SendEventOnce<T>(T eventValue) => DoSendEventOnce(eventValue);
-        public IDisposable RegisterEvent<T>(Action<T> onEvent) => EventSystem.RegisterEvent(onEvent);
-        public IDisposable RegisterEvent(ICanEvents events) => EventSystem.RegisterEvent(events);
-
-        /// <summary>
-        /// 可以拦截对应的Event事件
-        /// </summary>
-        protected virtual void DoSendEvent<TEvent>(TEvent eventValue) => EventSystem.SendEvent(eventValue);
-
-        /// <summary>
-        /// 可以拦截对应的Event事件
-        /// </summary>
-        protected virtual void DoSendEventOnce<TEvent>(TEvent eventValue) => EventSystem.SendEventOnce(eventValue);
+        [IgnoreParent] [SerializeField] private EventSystem? eventSystem;
+        public EventSystem EventSystem => eventSystem ?? new EventSystem();
 
         #endregion
+
+        protected override void OnDestroy()
+        {
+            ((IDisposable?)eventSystem)?.Dispose();
+            base.OnDestroy();
+        }
     }
 }

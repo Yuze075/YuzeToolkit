@@ -1,4 +1,4 @@
-#if !USE_EDITOR_TOOLBOX
+#if !YUZE_TOOLKIT_USE_EDITOR_TOOLBOX
 using System.Diagnostics;
 
 namespace UnityEngine

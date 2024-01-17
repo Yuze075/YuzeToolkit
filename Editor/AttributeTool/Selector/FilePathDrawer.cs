@@ -1,16 +1,17 @@
-﻿using System.IO;
+#nullable enable
+using System.IO;
 using UnityEditor;
 using UnityEngine;
-using FilePathAttribute = YuzeToolkit.AttributeTool.FilePathAttribute;
+using YuzeToolkit.LogTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     [CustomPropertyDrawer(typeof(FilePathAttribute))]
     public class FilePathDrawer : PropertyDrawer
     {
         #region static
 
-        private static bool IsPathValid(string propertyPath, string assetRelativePath)
+        private static bool IsPathValid(string propertyPath, string? assetRelativePath)
         {
             var targetPath = string.IsNullOrEmpty(assetRelativePath)
                 ? Path.Combine(Application.dataPath[..^7], propertyPath)
@@ -28,7 +29,7 @@ namespace YuzeToolkit.Editor.AttributeTool
             return rect;
         }
 
-        private static void UseFilePicker(SerializedProperty property, string relativePath)
+        private static void UseFilePicker(SerializedProperty property, string? relativePath)
         {
             var baseDataPath = Application.dataPath[..^7];
             var baseOpenPath = string.Empty;
@@ -74,7 +75,15 @@ namespace YuzeToolkit.Editor.AttributeTool
 
         #endregion
 
-        private FilePathAttribute Attribute => attribute as FilePathAttribute;
+        private FilePathAttribute Attribute
+        {
+            get
+            {
+                var filePathAttribute = attribute as FilePathAttribute;
+                LogSys.IsNotNull(filePathAttribute != null, nameof(filePathAttribute));
+                return filePathAttribute;
+            }
+        }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {

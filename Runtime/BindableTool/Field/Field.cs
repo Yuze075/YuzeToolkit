@@ -1,71 +1,51 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEngine;
 using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.BindableTool
 {
     /// <summary>
-    /// <inheritdoc/>
+    /// <inheritdoc cref="YuzeToolkit.BindableTool.IField{TValue}" />
     /// </summary>
     /// <typeparam name="TValue">属性的数据类型</typeparam>
     [Serializable]
-    public class Field<TValue> : IField<TValue>
+    public class Field<TValue> : BindableBase<TValue>, IField<TValue>
     {
-        public Field(TValue? value = default) => this.value = value;
+        public Field(TValue? value = default, ILogging? loggingParent = null) : base(loggingParent) =>
+            this.value = value;
 
-        private SLogTool? _sLogTool;
-        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
-
-        protected virtual string[] GetLogTags => new[]
-        {
-            nameof(Field<TValue>),
-            GetType().FullName
-        };
-
-        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
-
+        ~Field() => Dispose(false);
+        [NonSerialized] private bool _disposed;
         [SerializeField] private TValue? value;
 
-        public TValue? Value
+        public sealed override TValue? Value
         {
-            get => value;
-            set
+            get
             {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                return value;
+            }
+            protected set
+            {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
                 if (this.value != null && this.value.Equals(value)) return;
-                _valueChange?.Invoke(this.value, value);
+                ValueChange?.Invoke(this.value, value);
                 this.value = value;
             }
         }
 
-        #region Register
+        public void SetValue(TValue? value) => Value = value;
 
-        private ValueChange<TValue>? _valueChange;
-
-        public IDisposable RegisterChange(ValueChange<TValue> valueChange)
+        protected override void Dispose(bool disposing)
         {
-            _valueChange += valueChange;
-            return new UnRegister(() => { _valueChange -= valueChange; });
+            if (!_disposed)
+            {
+                value = default;
+                _disposed = true;
+            }
+
+            base.Dispose(disposing);
         }
-
-        public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
-        {
-            valueChange.Invoke(default, Value);
-            return RegisterChange(valueChange);
-        }
-
-        #endregion
-
-        #region IDisposable
-
-        void IDisposable.Dispose()
-        {
-            SLogTool.Release(ref _sLogTool);
-            Value = default;
-            _valueChange = null;
-        }
-
-        #endregion
-
-        public static implicit operator TValue?(Field<TValue> field) => field.Value;
     }
 }

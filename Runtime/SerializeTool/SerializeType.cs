@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEngine;
 using YuzeToolkit.LogTool;
 
@@ -45,7 +46,7 @@ namespace YuzeToolkit.SerializeTool
             }
 
             _type = Type.GetType(assemblyQualifiedTypeName);
-            if (_type == null) LogSys.Log($"无法找到与{assemblyQualifiedTypeName}对应的Type", ELogType.Warning);
+            if (_type == null) LogSys.LogWarning($"无法找到与{assemblyQualifiedTypeName}对应的Type");
         }
 
         public override string? ToString() => Type != null ? Type.FullName : $"<NullType>";

@@ -1,4 +1,6 @@
-﻿using System;
+#nullable enable
+using System;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 using YuzeToolkit.LogTool;
 
@@ -10,49 +12,32 @@ namespace YuzeToolkit.BindableTool
     /// </summary>
     /// <typeparam name="TValue">资源的数据类型</typeparam>
     [Serializable]
-    public abstract class Resource<TValue> : IResource<TValue>
+    public abstract class Resource<TValue> : ModifiableBase<TValue, ModifyResource>, IResource<TValue>
+        where TValue : unmanaged
     {
-        protected Resource(TValue value) => this.value = value;
+        protected Resource(TValue value, bool isReadOnly, IModifiableOwner? modifiableOwner, ILogging? loggingParent) :
+            base(isReadOnly, modifiableOwner, loggingParent) => this.value = value;
 
-        private SLogTool? _sLogTool;
-        private IModifiableOwner? _owner;
-
-        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
-
-        protected virtual string[] GetLogTags => new[]
-        {
-            nameof(IResource<TValue>),
-            GetType().FullName
-        };
-
-        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
-
-        IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
-
-        void IModifiable.SetOwner(IModifiableOwner value)
-        {
-            if (_owner != null)
-                LogTool.Log(
-                    $"类型为{GetType()}的{nameof(IModifiable)}的{nameof(_owner)}从{_owner.GetType()}替换为{value.GetType()}",
-                    ELogType.Warning);
-            _owner = value;
-        }
-
+        ~Resource() => Dispose(false);
+        [NonSerialized] private bool _disposed;
         [SerializeField] private TValue value;
-        [SerializeField] private bool isReadOnly;
 
-        public TValue Value
+        public sealed override TValue Value
         {
-            get => value;
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                return value;
+            }
             protected set
             {
-                if (this.value != null && this.value.Equals(value)) return;
-                _valueChange?.Invoke(this.value, value);
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                if (this.value.Equals(value)) return;
+                ValueChange?.Invoke(this.value, value);
                 this.value = value;
             }
         }
 
-        public bool IsReadOnly => isReadOnly;
         public abstract TValue Min { get; }
         public abstract TValue Max { get; }
 
@@ -61,59 +46,32 @@ namespace YuzeToolkit.BindableTool
 
         #region Modify
 
-        IDisposable IModifiable.Modify(IModify modify, IModifyReason reason)
+        protected sealed override void Modify(ModifyResource modifyResource)
         {
-            if (!this.IsSameOwnerReason(reason, LogTool)) return modify;
-
-            if (!this.TryCastModify(modify, LogTool, out ModifyResource modifyIn)) return modify;
-
-            if (!this.TryCheckModify(modifyIn, reason, out var modifyOut))
-                return modifyIn;
-
-            return Modify(modifyOut);
-        }
-
-        IDisposable IResource<TValue>.Modify(ModifyResource modifyResource, IModifyReason reason)
-        {
-            if (!this.IsSameOwnerReason(reason, LogTool)) return modifyResource;
-
-            if (!this.TryCheckModify(modifyResource, reason, out var modifyOut))
-                return modifyResource;
-
-            return Modify(modifyOut);
-        }
-
-        private IDisposable Modify(ModifyResource modifyResource)
-        {
-            if (!this.TryCheckModifyType(modifyResource, LogTool)) return modifyResource;
-
-            if (modifyResource.modifyValue == 0) return modifyResource;
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (modifyResource.modifyValue == 0) return;
 
             var result = CastToFloat(Value) + modifyResource.modifyValue;
             if (result > CastToFloat(Max))
             {
                 Value = Max;
                 _outOfMaxRange?.Invoke(Max, result);
-                return modifyResource;
+                return;
             }
 
             if (result < CastToFloat(Min))
             {
                 Value = Min;
                 _outOfMinRange?.Invoke(Min, result);
-                return modifyResource;
+                return;
             }
 
             Value = CastToTValue(result);
-            return modifyResource;
-        }
-
-        void IModifiable.ReCheckValue()
-        {
         }
 
         public EEnoughType Enough(ModifyResource modifyResource)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             var result = CastToFloat(Value) + modifyResource.modifyValue;
             if (result > CastToFloat(Max)) return EEnoughType.OutOfMaxRange;
             if (result < CastToFloat(Min)) return EEnoughType.OutOfMinRange;
@@ -124,47 +82,82 @@ namespace YuzeToolkit.BindableTool
 
         #region Register
 
-        private ValueChange<TValue>? _valueChange;
         private OutOfMaxRange<TValue>? _outOfMaxRange;
         private OutOfMinRange<TValue>? _outOfMinRange;
 
-        public IDisposable RegisterChange(ValueChange<TValue> valueChange)
+        [return: NotNullIfNotNull("outOfMaxRange")]
+        public IDisposable? RegisterOutOfMaxRange(OutOfMaxRange<TValue>? outOfMaxRange)
         {
-            _valueChange += valueChange;
-            return new UnRegister(() => { _valueChange -= valueChange; });
-        }
-
-        public IDisposable RegisterChangeBuff(ValueChange<TValue> valueChange)
-        {
-            valueChange.Invoke(default, Value);
-            return RegisterChange(valueChange);
-        }
-
-        public IDisposable RegisterOutOfMaxRange(OutOfMaxRange<TValue> outOfMaxRange)
-        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (outOfMaxRange == null) return null;
             _outOfMaxRange += outOfMaxRange;
-            return new UnRegister(() => { _outOfMaxRange -= outOfMaxRange; });
+            return UnRegister.Create(action => _outOfMaxRange -= action, outOfMaxRange);
         }
 
-        public IDisposable RegisterOutOfMinRange(OutOfMinRange<TValue> outOfMinRange)
+        [return: NotNullIfNotNull("outOfMinRange")]
+        public IDisposable? RegisterOutOfMinRange(OutOfMinRange<TValue>? outOfMinRange)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (outOfMinRange == null) return null;
             _outOfMinRange += outOfMinRange;
-            return new UnRegister(() => { _outOfMinRange -= outOfMinRange; });
+            return UnRegister.Create(action => _outOfMinRange -= action, outOfMinRange);
         }
 
         #endregion
 
-        #region IDisposable
-
-        void IDisposable.Dispose()
+        protected override void Dispose(bool disposing)
         {
-            SLogTool.Release(ref _sLogTool);
-            value = CastToTValue(default);
-            _valueChange = null;
-            _outOfMaxRange = null;
-            _outOfMinRange = null;
+            if (!_disposed)
+            {
+                value = default;
+                _outOfMaxRange = null;
+                _outOfMinRange = null;
+                _disposed = true;
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// 使用<see cref="float"/>的数据类型进行资源的计算
+    /// </summary>
+    [Serializable]
+    public class ResourceFloat : Resource<float>
+    {
+        public ResourceFloat(float value = default, bool isReadOnly = true, IModifiableOwner? modifiableOwner = null,
+            ILogging? loggingParent = null) : base(value, isReadOnly, modifiableOwner, loggingParent)
+        {
         }
 
-        #endregion
+        public override float Min => float.MinValue;
+        public override float Max => float.MaxValue;
+        protected sealed override float CastToFloat(float value) => value;
+        protected sealed override float CastToTValue(float value) => value;
+    }
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// 使用<see cref="int"/>的数据类型进行资源的计算
+    /// </summary>
+    [Serializable]
+    public abstract class ResourceInt : Resource<int>
+    {
+        protected ResourceInt(int value = default, bool isReadOnly = true, IModifiableOwner? modifiableOwner = null,
+            ILogging? loggingParent = null) : base(value, isReadOnly, modifiableOwner, loggingParent)
+        {
+        }
+
+        public override int Min => int.MinValue;
+        public override int Max => int.MaxValue;
+        protected sealed override float CastToFloat(int value) => value;
+
+        protected sealed override int CastToTValue(float value) => value switch
+        {
+            >= int.MaxValue => int.MaxValue,
+            <= int.MinValue => int.MinValue,
+            _ => (int)value
+        };
     }
 }

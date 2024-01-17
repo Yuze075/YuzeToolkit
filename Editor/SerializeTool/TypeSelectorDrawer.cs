@@ -1,14 +1,14 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using YuzeToolkit.AttributeTool;
-using YuzeToolkit.Editor.AttributeTool;
-using YuzeToolkit.SerializeTool;
+using YuzeToolkit.AttributeTool.Editor;
 
-namespace YuzeToolkit.Editor.SerializeTool
+namespace YuzeToolkit.SerializeTool.Editor
 {
     [CustomPropertyDrawer(typeof(TypeSelectorAttribute))]
     public class TypeSelectorDrawer : PropertyDrawer
@@ -97,7 +97,7 @@ namespace YuzeToolkit.Editor.SerializeTool
 
             var type = Type.GetType(baseTypeName);
             if (type == null) return NullDisplayName;
-            string typeName = null;
+            string? typeName = null;
 
             var subclassMenu = TypePopup.GetAttribute(type);
             if (subclassMenu != null)
@@ -151,7 +151,7 @@ namespace YuzeToolkit.Editor.SerializeTool
             return new[] { type.Name };
         }
 
-        public static AddSubclassMenuAttribute GetAttribute(Type type)
+        public static AddSubclassMenuAttribute? GetAttribute(Type type)
         {
             return Attribute.GetCustomAttribute(type, typeof(AddSubclassMenuAttribute)) as AddSubclassMenuAttribute;
         }
@@ -193,7 +193,7 @@ namespace YuzeToolkit.Editor.SerializeTool
 
             var typeArray = OrderByType(types).ToArray();
             var isSingleNamespace = true;
-            var namespaces = new string[KMaxNamespaceNestCount];
+            var namespaces = new string?[KMaxNamespaceNestCount];
             foreach (var type in typeArray)
             {
                 var splitTypePath = GetSplitTypePath(type);
@@ -272,28 +272,23 @@ namespace YuzeToolkit.Editor.SerializeTool
             }
         }
 
-        private static AdvancedDropdownItem GetItem(AdvancedDropdownItem parent, string name)
+        private static AdvancedDropdownItem? GetItem(AdvancedDropdownItem parent, string name)
         {
             return parent.children.FirstOrDefault(item => item.name == name);
         }
 
         private static readonly float KHeaderHeight = EditorGUIUtility.singleLineHeight * 2f;
 
-        private Type[] _mTypes;
+        private readonly Type[] _mTypes;
 
-        public event Action<TypePopupItem> OnItemSelected;
+        public event Action<TypePopupItem>? OnItemSelected;
 
         public TypePopup(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state) :
             base(state)
         {
-            SetTypes(types);
+            _mTypes = types.ToArray();
             minimumSize = new Vector2(minimumSize.x,
                 EditorGUIUtility.singleLineHeight * maxLineCount + KHeaderHeight);
-        }
-
-        private void SetTypes(IEnumerable<Type> types)
-        {
-            _mTypes = types.ToArray();
         }
 
         protected override AdvancedDropdownItem BuildRoot()
@@ -315,7 +310,7 @@ namespace YuzeToolkit.Editor.SerializeTool
 
     public class TypePopupItem : AdvancedDropdownItem
     {
-        public Type Type { get; }
-        public TypePopupItem(Type type, string name) : base(name) => Type = type;
+        public Type? Type { get; }
+        public TypePopupItem(Type? type, string name) : base(name) => Type = type;
     }
 }

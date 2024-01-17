@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEngine;
 
 namespace YuzeToolkit.AttributeTool
@@ -8,11 +9,11 @@ namespace YuzeToolkit.AttributeTool
     {
         public Type TargetType { get; }
         public string MatchRule { get; set; }
-        public Type MatchRuleType { get; }
+        public Type? MatchRuleType { get; }
         public bool HasLabel { get; }
         public bool UseValueToName { get; }
 
-        public StringInClassAttribute(Type targetType, string matchRule = "", Type matchRuleType = null,
+        public StringInClassAttribute(Type targetType, string matchRule = "", Type? matchRuleType = null,
             bool hasLabel = true, bool useValueToName = false)
         {
             TargetType = targetType;

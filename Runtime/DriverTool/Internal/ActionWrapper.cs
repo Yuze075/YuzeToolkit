@@ -1,12 +1,11 @@
-﻿using System;
+#nullable enable
+using System;
 
 namespace YuzeToolkit.DriverTool
 {
     internal class ActionUpdateWrapper : IUpdate
     {
-        private readonly Action _action;
-
-        public ActionUpdateWrapper(Action action, int priority, OrderType type)
+        public ActionUpdateWrapper(Action action, int priority, EOrderType type)
         {
             _action = action;
             UpdatePriority = priority;
@@ -14,39 +13,38 @@ namespace YuzeToolkit.DriverTool
         }
 
         public void OnUpdate() => _action();
+        private readonly Action _action;
         public int UpdatePriority { get; }
-        public OrderType Type { get; }
+        public EOrderType Type { get; }
     }
 
     internal class ActionFixedUpdateWrapper : IFixedUpdate
     {
-        private readonly Action _action;
-
-        public ActionFixedUpdateWrapper(Action action, int priority, OrderType type)
+        public ActionFixedUpdateWrapper(Action action, int priority, EOrderType type)
         {
             _action = action;
             UpdatePriority = priority;
             Type = type;
         }
 
-        public void OnFixedUpdate() => _action.Invoke();
+        public void OnFixedUpdate() => _action();
+        private readonly Action _action;
         public int UpdatePriority { get; }
-        public OrderType Type { get; }
+        public EOrderType Type { get; }
     }
 
     internal class ActionLateUpdateWrapper : ILateUpdate
     {
-        private readonly Action _action;
-
-        public ActionLateUpdateWrapper(Action action, int priority, OrderType type)
+        public ActionLateUpdateWrapper(Action action, int priority, EOrderType type)
         {
             _action = action;
             UpdatePriority = priority;
             Type = type;
         }
 
-        public void OnLateUpdate() => _action.Invoke();
+        public void OnLateUpdate() => _action();
+        private readonly Action _action;
         public int UpdatePriority { get; }
-        public OrderType Type { get; }
+        public EOrderType Type { get; }
     }
 }

@@ -1,8 +1,8 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using UnityEngine;
 
 namespace YuzeToolkit.AttributeTool
 {
@@ -100,7 +100,7 @@ namespace YuzeToolkit.AttributeTool
             }
         }
 
-        public static bool TryGetValue<T>(this object source, string valueName, out T value)
+        public static bool TryGetValue<T>(object source, string valueName, out T value)
         {
             if (GetValue(source, valueName) is T t)
             {
@@ -112,10 +112,10 @@ namespace YuzeToolkit.AttributeTool
             return false;
         }
 
-        public static T? GetValue<T>(this object? source, string? valueName) =>
-            source.GetValue(valueName) is T t ? t : default;
+        public static T? GetValue<T>(object? source, string? valueName) =>
+            GetValue(source, valueName) is T t ? t : default;
 
-        public static object? GetValue(this object? source, string? valueName)
+        public static object? GetValue(object? source, string? valueName)
         {
             if (source == null) return null;
             if (string.IsNullOrWhiteSpace(valueName)) return null;
@@ -135,7 +135,7 @@ namespace YuzeToolkit.AttributeTool
                 select methodInfo.Invoke(source, null)).FirstOrDefault();
         }
         
-        public static bool SetValue(this object? source, string? valueName, object? value)
+        public static bool SetValue(object? source, string? valueName, object? value)
         {
             if (source == null) return false;
             if (string.IsNullOrWhiteSpace(valueName)) return false;

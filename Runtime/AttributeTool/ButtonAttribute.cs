@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEngine;
 
 namespace YuzeToolkit.AttributeTool
@@ -25,10 +26,10 @@ namespace YuzeToolkit.AttributeTool
     public class ButtonAttribute : PropertyAttribute
     {
         public string MethodName { get; }
-        public string Text { get; }
+        public string? Text { get; }
         public ButtonEnableMode SelectedEnableMode { get; }
 
-        public ButtonAttribute(string methodName, string text = null,
+        public ButtonAttribute(string methodName, string? text = null,
             ButtonEnableMode enabledMode = ButtonEnableMode.Always)
         {
             MethodName = methodName;

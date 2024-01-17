@@ -1,11 +1,12 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool.Info
+namespace YuzeToolkit.AttributeTool.Editor.Info
 {
     [CustomPropertyDrawer(typeof(HelpBoxAttribute))]
+    [Obsolete]
     public class HelpBoxDrawer : PropertyDrawer
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

@@ -1,12 +1,12 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool
+namespace YuzeToolkit.AttributeTool.Editor
 {
     [CustomPropertyDrawer(typeof(StringInClassAttribute))]
     public class StringInClassDrawer : PropertyDrawer
@@ -14,7 +14,7 @@ namespace YuzeToolkit.Editor.AttributeTool
         private bool _stringIsInClass = true;
         private bool _meetMatchRule = true;
         private bool _openMatchRule;
-        private string _matchRule;
+        private string? _matchRule;
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -152,8 +152,7 @@ namespace YuzeToolkit.Editor.AttributeTool
             _stringIsInClass = index >= 0;
 
             // 判断是否为MatchRule所需要的
-            (listName, listValue) =
-                GetStringInClass(stringInClassAttribute.TargetType, _matchRule);
+            (listName, listValue) = GetStringInClass(stringInClassAttribute.TargetType, _matchRule ?? "");
             index = listValue.IndexOf(property.stringValue);
             _meetMatchRule = index >= 0;
 
@@ -178,7 +177,7 @@ namespace YuzeToolkit.Editor.AttributeTool
         /// <summary>
         /// 获取对于的<see cref="string"/>列表, 默认返回列表包含一个空值
         /// </summary>
-        private static (List<string> listName, List<string> listValue) GetStringInClass(Type targetType,
+        private static (List<string> listName, List<string> listValue) GetStringInClass(Type? targetType,
             string matchRule = "")
         {
             var listName = new List<string> { "<Empty>" };

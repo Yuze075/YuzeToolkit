@@ -1,6 +1,7 @@
-﻿#if UNITY_EDITOR
+#nullable enable
+#pragma warning disable CS0414 // 定义了成员但是未使用
+#if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using YuzeToolkit.SerializeTool;
@@ -8,6 +9,21 @@ using UnityObject = UnityEngine.Object;
 
 namespace YuzeToolkit.InspectorTool
 {
+    [Serializable]
+    public struct ShowKeyValuePair
+    {
+        public static ShowKeyValuePair GetKeyValuePair<TKey, TValue>(TKey key, TValue value) => new()
+        {
+            _key = IShowValue.GetShowValue(key),
+            _value = IShowValue.GetShowValue(value)
+        };
+
+        [Line] [IgnoreParent] [SerializeReference]
+        private IShowValue _key;
+
+        [IgnoreParent] [SerializeReference] private IShowValue _value;
+    }
+
     public interface IShowValue
     {
         /// <summary>
@@ -18,7 +34,6 @@ namespace YuzeToolkit.InspectorTool
         public static IShowValue GetShowValue<T>(T tValue, int upLayers = 1) => tValue switch
         {
             null => null!,
-            IGetShowValue getShowValue => GetShowValue(getShowValue.GetShowValue(), upLayers),
             UnityObject value => new UnityObjectValue(value, upLayers),
             string value => new StringValue(value, upLayers),
             bool value => new BoolValue(value, upLayers),
@@ -36,7 +51,6 @@ namespace YuzeToolkit.InspectorTool
             decimal value => new DecimalValue(value, upLayers),
             Enum value => new EnumValue(value, upLayers),
             Type value => new TypeValue(value, upLayers),
-            // IEnumerable value when IsListOrArray(value.GetType()) => new ListValue(value, label),
             _ => new SystemObjectValue(tValue, upLayers)
         };
 
@@ -57,7 +71,7 @@ namespace YuzeToolkit.InspectorTool
     {
         public SystemObjectValue(object value, int upLayers)
         {
-            this.value = value;
+            _value = value;
             _disableValue = value.GetType().IsValueType;
             _upLayers = upLayers;
         }
@@ -67,10 +81,10 @@ namespace YuzeToolkit.InspectorTool
         [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
         [ReferencePicker(typeof(object), TypeGrouping.ByNamespace)]
         [SerializeReference]
-        private object value;
+        private object _value;
 
-        private bool _disableValue;
-        private int _upLayers;
+        [NonSerialized] private bool _disableValue;
+        [NonSerialized] private int _upLayers;
     }
 
     [Serializable]
@@ -86,7 +100,7 @@ namespace YuzeToolkit.InspectorTool
         [InLineEditor] [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))] [SerializeField]
         private UnityObject value;
 
-        private int _upLayers;
+        [NonSerialized] private int _upLayers;
     }
 
     [Serializable]
@@ -102,7 +116,7 @@ namespace YuzeToolkit.InspectorTool
         [Disable] [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))] [SerializeField]
         private T value;
 
-        private int _upLayers;
+        [NonSerialized] private int _upLayers;
     }
 
     #region BaseType
@@ -262,9 +276,10 @@ namespace YuzeToolkit.InspectorTool
                           ETypeSetting.AllowNotSerializable)]
         private SerializeType value;
 
-        private int _upLayers;
+        [NonSerialized] private int _upLayers;
     }
 
     #endregion
 }
 #endif
+#pragma warning restore CS0414 // 定义了成员但是未使用

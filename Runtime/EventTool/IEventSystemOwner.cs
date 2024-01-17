@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.EventTool
+#nullable enable
+namespace YuzeToolkit.EventTool
 {
     public interface IEventSystemOwner
     {

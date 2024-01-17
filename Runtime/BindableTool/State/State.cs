@@ -1,72 +1,57 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.BindableTool
 {
-    /// <inheritdoc/>
+    /// <inheritdoc cref="YuzeToolkit.BindableTool.IState" />
     [Serializable]
-    public class State : IState
+    public abstract class State : ModifiableBase<bool, ModifyState>, IState
     {
-        protected State(bool value)
+        protected State(bool value = default, bool isReadOnly = true, IModifiableOwner? modifiableOwner = null,
+            ILogging? loggingParent = null) : base(isReadOnly, modifiableOwner, loggingParent)
         {
             valueBase = value;
             this.value = value;
         }
 
-        private SLogTool? _sLogTool;
-        private IModifiableOwner? _owner;
-
-        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
-
-        protected virtual string[] GetLogTags => new[]
-        {
-            nameof(IState),
-            GetType().FullName
-        };
-
-        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
-
-        IModifiableOwner IModifiable.Owner => LogTool.IsNotNull(_owner);
-
-        void IModifiable.SetOwner(IModifiableOwner value)
-        {
-            if (_owner != null)
-                LogTool.Log(
-                    $"类型为{GetType()}的{nameof(IModifiable)}的{nameof(_owner)}从{_owner.GetType()}替换为{value.GetType()}");
-            _owner = value;
-        }
-
+        ~State() => Dispose(false);
+        [NonSerialized] private bool _disposed;
+        [NonSerialized] private bool _isDisposing;
         [SerializeField] private bool value;
         [SerializeField] private bool valueBase;
-        [SerializeField] private bool isReadOnly;
 
-        public bool Value
+        public sealed override bool Value
         {
-            get => value;
-            private set
+            get
             {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                return value;
+            }
+            protected set
+            {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
                 if (this.value == value) return;
-                _onValueChange?.Invoke(this.value, value);
+                ValueChange?.Invoke(this.value, value);
                 this.value = value;
             }
         }
-
-        public bool IsReadOnly => isReadOnly;
 
         public bool this[int priority, bool removeSmall = true]
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
                 var retValue = valueBase;
-                if (modifyStates.Count == 0) return retValue;
+                if (ModifyStates.Count == 0) return retValue;
 
-                if (!removeSmall && priority < modifyStates[0].Priority) return retValue;
-                var modifyPriority = removeSmall ? priority : modifyStates[0].Priority;
+                if (!removeSmall && priority < ModifyStates[0].Priority) return retValue;
+                var modifyPriority = removeSmall ? priority : ModifyStates[0].Priority;
                 var orValue = false;
                 var andValue = true;
-                foreach (var modifyState in modifyStates)
+                foreach (var modifyState in ModifyStates)
                 {
                     if (removeSmall && modifyState.Priority < modifyPriority) continue;
 
@@ -100,59 +85,40 @@ namespace YuzeToolkit.BindableTool
 
         #region Modify
 
-        [SerializeReference] private List<ModifyState> modifyStates = new();
+        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)] [SerializeReference]
+        private List<ModifyState>? modifyStates;
 
-        IDisposable IModifiable.Modify(IModify modify, IModifyReason reason)
+        private List<ModifyState> ModifyStates => modifyStates ??= new List<ModifyState>();
+
+        protected sealed override void Modify(ModifyState modifyState)
         {
-            if (!this.IsSameOwnerReason(reason, LogTool)) return modify;
-
-            if (!this.TryCastModify(modify, LogTool, out ModifyState modifyIn)) return modify;
-
-            if (!this.TryCheckModify(modifyIn, reason, out var modifyOut))
-                return modifyIn;
-
-            return Modify(modifyOut);
-        }
-
-        IDisposable IState.Modify(ModifyState modifyState, IModifyReason reason)
-        {
-            if (!this.IsSameOwnerReason(reason, LogTool)) return modifyState;
-
-            if (!this.TryCheckModify(modifyState, reason, out var modifyOut))
-                return modifyState;
-
-            return Modify(modifyOut);
-        }
-
-        private IDisposable Modify(ModifyState modifyState)
-        {
-            if (!this.TryCheckModifyType(modifyState, LogTool)) return modifyState;
-
-            var index = modifyStates.BinarySearch(modifyState, ModifyStateComparer.Comparer);
-            modifyStates.Insert(index >= 0 ? index : ~index, modifyState);
-
-            modifyState.Init(new UnRegister(() =>
-            {
-                if (modifyStates.Remove(modifyState)) ReCheckValue();
-            }), this);
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            var index = ModifyStates.BinarySearch(modifyState, modifyState);
+            ModifyStates.Insert(index >= 0 ? index : ~index, modifyState);
             ReCheckValue();
-            return modifyState;
+        }
+
+        void IState.RemoveModify(ModifyState modifyState)
+        {
+            if (_disposed || _isDisposing) return;
+            if (ModifyStates.Remove(modifyState)) ReCheckValue();
         }
 
         public void ReCheckValue()
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             var retValue = valueBase;
-            if (modifyStates.Count == 0)
+            if (ModifyStates.Count == 0)
             {
                 Value = retValue;
                 return;
             }
 
-            var priority = modifyStates[0].Priority;
+            var priority = ModifyStates[0].Priority;
             var orValue = false;
             var andValue = true;
 
-            foreach (var modify in modifyStates)
+            foreach (var modify in ModifyStates)
             {
                 if (modify.Priority != priority)
                 {
@@ -182,36 +148,27 @@ namespace YuzeToolkit.BindableTool
 
         #endregion
 
-        #region RegisterChange
-
-        private ValueChange<bool>? _onValueChange;
-
-        public IDisposable RegisterChange(ValueChange<bool> onValueChange)
+        protected override void Dispose(bool disposing)
         {
-            _onValueChange += onValueChange;
-            return new UnRegister(() => { _onValueChange -= onValueChange; });
+            if (!_disposed)
+            {
+                if (modifyStates != null)
+                {
+                    if (disposing)
+                    {
+                        _isDisposing = true;
+                        for (var i = modifyStates.Count - 1; i >= 0; i--) modifyStates[i].Dispose();
+                    }
+
+                    modifyStates.Clear();
+                }
+
+                value = default;
+                valueBase = default;
+                _disposed = true;
+            }
+
+            base.Dispose(disposing);
         }
-
-        public IDisposable RegisterChangeBuff(ValueChange<bool> onValueChange)
-        {
-            onValueChange(!Value, Value);
-            return RegisterChange(onValueChange);
-        }
-
-        #endregion
-
-        #region IDisposable
-
-        void IDisposable.Dispose()
-        {
-            SLogTool.Release(ref _sLogTool);
-            modifyStates.Clear();
-            ReCheckValue();
-            _onValueChange = null;
-        }
-
-        #endregion
-
-        public static implicit operator bool(State state) => state.Value;
     }
 }

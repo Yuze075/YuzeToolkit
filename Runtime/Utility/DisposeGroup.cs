@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using YuzeToolkit.LogTool;
 using YuzeToolkit.PoolTool;
@@ -8,8 +9,8 @@ namespace YuzeToolkit
     public struct DisposeGroup : IDisposable
     {
         private bool _isDisposed;
-        private List<IDisposable?>? _disposables;
-        private List<IDisposable?> Disposables => _disposables ??= ListPool<IDisposable?>.Get();
+        private List<IDisposable>? _disposables;
+        private List<IDisposable> Disposables => _disposables ??= ListPool<IDisposable>.Get();
 
         /// <summary>
         /// 添加一个<see cref="IDisposable"/>到列表中, 在触发<see cref="DisposeGroup"/>.<see cref="DisposeGroup.Dispose"/>时释放
@@ -18,32 +19,15 @@ namespace YuzeToolkit
         {
             if (_isDisposed)
             {
-                LogSys.Error("对象已经释放了, 无法继续添加IDisposable!");
+                LogSys.LogError("对象已经释放了, 无法继续添加IDisposable!");
                 return;
             }
 
+            if (disposable == null) return;
+            if (ReferenceEquals(disposable, Null)) return;
             Disposables.Add(disposable);
         }
 
-        /// <summary>
-        /// 注册一个委托<paramref name="action"/>, 在触发<see cref="DisposeGroup"/>.<see cref="DisposeGroup.Dispose"/>时触发<br/>
-        /// 同时在触发返回值<see cref="IDisposable"/>.<see cref="IDisposable.Dispose"/>时, 也会触发<paramref name="action"/>
-        /// </summary>
-        /// <returns><see cref="IDisposable"/>接口, 可以直接触发释放对应的<paramref name="action"/>,
-        /// 并且从<see cref="DisposeGroup"/>中移除</returns>
-        public IDisposable UnRegister(Action? action)
-        {
-            if (_isDisposed)
-            {
-                LogSys.Error("对象已经释放了, 无法继续添加action!");
-                return new UnRegister(action);
-            }
-
-            var unRegister = new UnRegister(action);
-            Disposables.Add(unRegister);
-            return unRegister;
-        }
-        
         public void Dispose()
         {
             if (_isDisposed) return;
@@ -60,8 +44,16 @@ namespace YuzeToolkit
             }
 
             _disposables.Clear();
-            ListPool<IDisposable?>.Release(_disposables);
-            _disposables = null;
+            ListPool<IDisposable>.RefRelease(ref _disposables);
+        }
+
+        public static IDisposable Null { get; } = new NullDisposable();
+
+        private class NullDisposable : IDisposable
+        {
+            public void Dispose()
+            {
+            }
         }
     }
 }

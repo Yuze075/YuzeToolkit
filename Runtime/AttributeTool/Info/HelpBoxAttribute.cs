@@ -1,9 +1,11 @@
-﻿using System;
+#nullable enable
+using System;
 using UnityEngine;
 
 namespace YuzeToolkit.AttributeTool
 {
     [AttributeUsage(AttributeTargets.Field)]
+    [Obsolete]
     public class HelpBoxAttribute : PropertyAttribute
     {
         public string GetSting { get; }

@@ -1,10 +1,12 @@
-﻿using UnityEditor;
+#nullable enable
+using System;
+using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.AttributeTool;
 
-namespace YuzeToolkit.Editor.AttributeTool.Info
+namespace YuzeToolkit.AttributeTool.Editor.Info
 {
     [CustomPropertyDrawer(typeof(ShowOnlyAttribute))]
+    [Obsolete]
     public class ShowOnlyDrawer : PropertyDrawer
     {
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using UnityEngine;
 using YuzeToolkit.LogTool;
@@ -10,21 +11,31 @@ namespace YuzeToolkit.SerializeTool
     {
         public USerialize(T value) : this() => Value = value;
 
-        [PrefabObjectOnly] [InLineEditor] [SerializeField]
+        [InLineEditor] [SerializeField] [LabelByParent]
         private UnityObject? value;
 
         public T? Value
         {
             get
             {
-                if (value is T t) return t;
-                LogSys.Log($"{GetType()}中的{nameof(value)}不是目标的{typeof(T)}类型！", ELogType.Warning);
+                switch (value)
+                {
+                    case T t:
+                        return t;
+                    case GameObject gameObject when gameObject.TryGetComponent<T>(out var t1):
+                        value = t1 as UnityObject;
+                        return t1;
+                }
+
+                if (value == null) return null;
+                value = null;
+                LogSys.LogWarning($"{GetType()}中的{nameof(value)}不是目标的{typeof(T)}类型！");
                 return null;
             }
             set
             {
                 if (value is UnityObject o) this.value = o;
-                LogSys.Log($"{GetType()}中, 传人的{nameof(value)}不是{typeof(UnityObject)}类型！", ELogType.Warning);
+                LogSys.LogWarning($"{GetType()}中, 传人的{nameof(value)}不是{typeof(UnityObject)}类型！");
             }
         }
 

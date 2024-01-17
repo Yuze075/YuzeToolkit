@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.DataTool
+#nullable enable
+namespace YuzeToolkit.DataTool
 {
     public interface IModel<out TId>
     {

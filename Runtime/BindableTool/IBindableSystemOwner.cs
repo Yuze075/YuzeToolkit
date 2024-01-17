@@ -1,4 +1,5 @@
-﻿namespace YuzeToolkit.BindableTool
+#nullable enable
+namespace YuzeToolkit.BindableTool
 {
     public interface IBindableSystemOwner
     {

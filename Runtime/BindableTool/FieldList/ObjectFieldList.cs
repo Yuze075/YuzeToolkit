@@ -1,50 +1,82 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 using YuzeToolkit.LogTool;
-using UnityObject = UnityEngine.Object;
 
 namespace YuzeToolkit.BindableTool
 {
     [Serializable]
-    public class ObjectFieldList<TValue> : IFieldList<TValue> where TValue : UnityObject
+    public class ObjectFieldList<TValue> : IFieldList<TValue> where TValue : UnityEngine.Object
     {
-        public ObjectFieldList() => list = new List<TValue>();
-        public ObjectFieldList(IEnumerable<TValue> enumerable) => list = new List<TValue>(enumerable);
-
-        private SLogTool? _sLogTool;
-        protected ILogTool LogTool => _sLogTool ??= SLogTool.Create(GetLogTags);
-
-        protected virtual string[] GetLogTags => new[]
+        public ObjectFieldList(ILogging? loggingParent = null)
         {
-            nameof(IFieldList<TValue>),
-            GetType().FullName
-        };
+            list = new List<TValue>();
+            Logging = new Logging(new[] { GetType().FullName }, loggingParent);
+        }
 
-        void IBindable.SetLogParent(ILogTool parent) => ((SLogTool)LogTool).Parent = parent;
+        public ObjectFieldList(IEnumerable<TValue> enumerable, ILogging? loggingParent = null)
+        {
+            list = new List<TValue>(enumerable);
+            Logging = new Logging(new[] { GetType().FullName }, loggingParent);
+        }
 
-        [ReorderableList(Foldable = false, HasLabels = false)] [InLineEditor] [SerializeField]
+        ~ObjectFieldList() => Dispose(false);
+        [NonSerialized] private bool _disposed;
+        protected Logging Logging { get; set; }
+        object IBindable.Value => list;
+
+
+        [ReorderableList(draggable: false, fixedSize: true, HasLabels = false)]
+        [InLineEditor]
+        [SerializeField]
+        [LabelByParent]
         private List<TValue> list;
 
         #region ICollection
 
-        public int Count => list.Count;
+        public int Count
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                return list.Count;
+            }
+        }
+
         public bool IsReadOnly => true;
-        public void Add(TValue item) => Insert(Count, item);
+
+        public void Add(TValue item)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            Insert(Count, item);
+        }
 
         public void Clear()
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             list.Clear();
-            _clearAllValue?.Invoke();
+            _listChange?.Invoke(EventType.Clear, default!, -1);
             _fieldListChange?.Invoke(this);
         }
 
-        public bool Contains(TValue item) => list.Contains(item);
-        public void CopyTo(TValue[] array, int arrayIndex) => list.CopyTo(array, arrayIndex);
+        public bool Contains(TValue item)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            return list.Contains(item);
+        }
+
+        public void CopyTo(TValue[] array, int arrayIndex)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            list.CopyTo(array, arrayIndex);
+        }
 
         public bool Remove(TValue item)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             var index = IndexOf(item);
             if (index < 0) return false;
             RemoveAt(index);
@@ -55,32 +87,43 @@ namespace YuzeToolkit.BindableTool
 
         #region IList
 
-        public int IndexOf(TValue item) => list.IndexOf(item);
+        public int IndexOf(TValue item)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            return list.IndexOf(item);
+        }
 
         public void Insert(int index, TValue item)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             list.Insert(index, item);
-            _addValue?.Invoke(item, index);
+            _listChange?.Invoke(EventType.Add, item, index);
             _fieldListChange?.Invoke(this);
         }
 
         public void RemoveAt(int index)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
             var item = list[index];
             list.RemoveAt(index);
-            _removeValue?.Invoke(item, index);
+            _listChange?.Invoke(EventType.Remove, item, index);
             _fieldListChange?.Invoke(this);
         }
 
         public TValue this[int index]
         {
-            get => list[index];
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+                return list[index];
+            }
             set
             {
+                if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
                 var baseValue = list[index];
                 if (baseValue != null && baseValue.Equals(value)) return;
                 list[index] = value;
-                _changeValue?.Invoke(baseValue!, value, index);
+                _listChange?.Invoke(EventType.Value, value, index, baseValue);
                 _fieldListChange?.Invoke(this);
             }
         }
@@ -90,60 +133,72 @@ namespace YuzeToolkit.BindableTool
         #region RegisterChange
 
         private FieldListChange<TValue>? _fieldListChange;
-        private AddValue<TValue>? _addValue;
-        private RemoveValue<TValue>? _removeValue;
-        private ChangeValue<TValue>? _changeValue;
-        private ClearAllValue? _clearAllValue;
+        private ListChange<TValue>? _listChange;
 
-        public IDisposable RegisterChange(FieldListChange<TValue> valueChange)
+        [return: NotNullIfNotNull("valueChange")]
+        IDisposable? IBindable.RegisterChange(ValueChange<object>? valueChange)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
+            return RegisterChange(fieldList => { valueChange(fieldList, fieldList); });
+        }
+
+        [return: NotNullIfNotNull("valueChange")]
+        IDisposable? IBindable.RegisterChangeBuff(ValueChange<object>? valueChange)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
+            valueChange(null, this);
+            return RegisterChange(fieldList => { valueChange(null, fieldList); });
+        }
+
+        [return: NotNullIfNotNull("valueChange")]
+        public IDisposable? RegisterChange(FieldListChange<TValue>? valueChange)
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
             _fieldListChange += valueChange;
-            return new UnRegister(() => { _fieldListChange -= valueChange; });
+            return UnRegister.Create(action => _fieldListChange -= action, valueChange);
         }
 
-        public IDisposable RegisterChangeBuff(FieldListChange<TValue> valueChange)
+        [return: NotNullIfNotNull("valueChange")]
+        public IDisposable? RegisterChangeBuff(FieldListChange<TValue>? valueChange)
         {
-            valueChange.Invoke(this);
-            return RegisterChange(valueChange);
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
+            valueChange(this);
+            _fieldListChange += valueChange;
+            return UnRegister.Create(action => _fieldListChange -= action, valueChange);
         }
 
-        IDisposable IBindableList<TValue>.RegisterChange(BindableListChange<TValue> valueChange)
+        [return: NotNullIfNotNull("valueChange")]
+        IDisposable? IBindableList<TValue>.RegisterChange(BindableListChange<TValue>? valueChange)
         {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return new UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return UnRegister.Create(action => _fieldListChange -= action, fieldListChange);
         }
 
-        IDisposable IBindableList<TValue>.RegisterChangeBuff(BindableListChange<TValue> valueChange)
+        [return: NotNullIfNotNull("valueChange")]
+        IDisposable? IBindableList<TValue>.RegisterChangeBuff(BindableListChange<TValue>? valueChange)
         {
-            valueChange.Invoke(this);
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (valueChange == null) return null;
+            valueChange(this);
             var fieldListChange = new FieldListChange<TValue>(valueChange);
             _fieldListChange += fieldListChange;
-            return new UnRegister(() => { _fieldListChange -= fieldListChange; });
+            return UnRegister.Create(action => _fieldListChange -= action, fieldListChange);
         }
 
-        public IDisposable RegisterAdd(AddValue<TValue> addValue)
+        [return: NotNullIfNotNull("listChange")]
+        public IDisposable? RegisterListChange(ListChange<TValue>? listChange)
         {
-            _addValue += addValue;
-            return new UnRegister(() => { _addValue -= addValue; });
-        }
-
-        public IDisposable RegisterRemove(RemoveValue<TValue> removeValue)
-        {
-            _removeValue += removeValue;
-            return new UnRegister(() => { _removeValue -= removeValue; });
-        }
-
-        public IDisposable RegisterChange(ChangeValue<TValue> changeValue)
-        {
-            _changeValue += changeValue;
-            return new UnRegister(() => { _changeValue -= changeValue; });
-        }
-
-        public IDisposable RegisterChange(ClearAllValue clearAllValue)
-        {
-            _clearAllValue += clearAllValue;
-            return new UnRegister(() => { _clearAllValue -= clearAllValue; });
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            if (listChange == null) return null;
+            _listChange += listChange;
+            return UnRegister.Create(action => _listChange -= action, listChange);
         }
 
         #endregion
@@ -152,18 +207,28 @@ namespace YuzeToolkit.BindableTool
 
         void IDisposable.Dispose()
         {
-            SLogTool.Release(ref _sLogTool);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
             Clear();
             _fieldListChange = null;
-            _addValue = null;
-            _removeValue = null;
-            _changeValue = null;
-            _clearAllValue = null;
+            _listChange = null;
+            _disposed = true;
         }
 
         #endregion
 
-        public IEnumerator<TValue> GetEnumerator() => list.GetEnumerator();
+        public IEnumerator<TValue> GetEnumerator()
+        {
+            if (_disposed) throw new ObjectDisposedException($"{GetType().Name}已经被释放！");
+            return list.GetEnumerator();
+        }
+
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

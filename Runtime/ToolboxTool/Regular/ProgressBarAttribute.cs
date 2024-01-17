@@ -1,4 +1,4 @@
-#if !USE_EDITOR_TOOLBOX
+#if !YUZE_TOOLKIT_USE_EDITOR_TOOLBOX
 using System;
 using System.Diagnostics;
 
@@ -35,6 +35,8 @@ namespace UnityEngine
         }
 
         public string HexColor { get; set; }
+
+        public bool IsInteractable { get; set; }
     }
 }
 #endif

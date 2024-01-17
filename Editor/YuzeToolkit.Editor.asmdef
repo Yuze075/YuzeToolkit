@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "YuzeToolkit",
-        "Toolbox"
+        "Toolbox",
+        "Toolbox.Editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -18,7 +19,7 @@
         {
             "name": "com.browar.editor-toolbox",
             "expression": "0.0.0",
-            "define": "USE_EDITOR_TOOLBOX"
+            "define": "YUZE_TOOLKIT_USE_EDITOR_TOOLBOX"
         }
     ],
     "noEngineReferences": false

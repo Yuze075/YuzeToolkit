@@ -17,12 +17,7 @@
         {
             "name": "com.unity.netcode.gameobjects",
             "expression": "0.0.0",
-            "define": "USE_UNITY_NETCODE"
-        },
-        {
-            "name": "com.browar.editor-toolbox",
-            "expression": "0.0.0",
-            "define": "USE_EDITOR_TOOLBOX"
+            "define": "YUZE_TOOLKIT_USE_UNITY_NETCODE"
         }
     ],
     "noEngineReferences": false

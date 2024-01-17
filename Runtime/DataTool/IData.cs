@@ -1,24 +1,21 @@
-﻿using System;
+#nullable enable
 using System.Collections.Generic;
-using YuzeToolkit.LogTool;
+using System.Diagnostics.CodeAnalysis;
 
 namespace YuzeToolkit.DataTool
 {
-    public interface IData : IDisposable
+    public interface IData
     {
         void Clear();
-        ILogTool Parent { set; }
     }
 
     public interface IData<TValue> : IData
     {
         IReadOnlyList<TValue> Values { get; }
-        TValue? Get<TGetId>(TGetId getId);
-        bool TryGet<TGetId>(TGetId getId, out TValue value);
         int GetIndex(TValue value);
-        int GetIndex<TGetId>(TGetId getId);
+        bool TryGetIndex(TValue value, out int index);
         TValue? GetByIndex(int index, int idHashCode);
-        bool TryGetByIndex(int index, int idHashCode, out TValue value);
+        bool TryGetByIndex(int index, int idHashCode, [MaybeNullWhen(false)] out TValue value);
         internal void RegisterValue(TValue value);
         internal void RegisterValues(IEnumerable<TValue> values);
     }

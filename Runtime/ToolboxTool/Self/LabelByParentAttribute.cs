@@ -1,4 +1,5 @@
-﻿#if !USE_EDITOR_TOOLBOX
+#nullable enable
+#if !YUZE_TOOLKIT_USE_EDITOR_TOOLBOX
 using System;
 using System.Diagnostics;
 using Toolbox.Attributes;

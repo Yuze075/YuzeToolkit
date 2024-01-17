@@ -1,5 +1,8 @@
-﻿using System;
-using System.Collections;
+#nullable enable
+using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using UnityEngine;
 using UnityDebug = UnityEngine.Debug;
 using UnityObject = UnityEngine.Object;
 
@@ -11,165 +14,150 @@ namespace YuzeToolkit.LogTool
     /// Log: 打印各种显示信息<br/>
     /// Warning: 打印各种警告信息, 这些逻辑暂时不影响游戏运行, 但是也不应该出现<br/>
     /// Error: 打印各种错误信息, 这些逻辑已经影响到游戏运行了, 需要立刻修复<br/>
-    /// Exception(ThrowException): 打印异常信息, 是一种特别的错误, 应该在现在终止游戏, 避免继续运行导致其他模块出现问题, 需要立刻修复<br/><br/>
+    /// Assert: 断言检测, 如果检测失败, 则会抛出异常(用于处理一些在编辑器中需要检测处理的任务, 例如是否为空)<br/><br/>
     ///
-    /// 可以通过传入<see cref="T:string[]"/> <c>tags</c>来进行标签的记录<br/>
-    /// 可以通过传入<see cref="UnityEngine.Object"/> <c>context</c>来进行输出对象的记录<br/><br/>
-    ///
-    /// Exception和ThrowException的区别, Exception是在函数内部抛出异常, ThrowException是记录异常信息最终将异常返回但不抛出
+    /// 可以通过传入<see cref="T:string[]"/> <c>tags</c>来进行标签的记录<br/><br/>
     /// </summary>
     public static class LogSys
     {
-        public static void Log<T>(T message, params string[] tags) =>
-            Log(message, ELogType.Log, null, tags);
+        public const string C_IsNull = "对象数据为空!";
 
-        public static void Log<T>(T message, UnityObject? context, params string[] tags) =>
-            Log(message, ELogType.Log, context, tags);
+        #region Internal
 
-        public static void Warning<T>(T message, params string[] tags) =>
-            Log(message, ELogType.Warning, null, tags);
-
-        public static void Warning<T>(T message, UnityObject? context, params string[] tags) =>
-            Log(message, ELogType.Warning, context, tags);
-
-        public static void Error<T>(T message, params string[] tags) =>
-            Log(message, ELogType.Error, null, tags);
-
-        public static void Error<T>(T message, UnityObject? context, params string[] tags) =>
-            Log(message, ELogType.Error, context, tags);
-
-        public static void Exception<T>(T message, params string[] tags) =>
-            Log(message, ELogType.Exception, null, tags);
-
-        public static void Exception<T>(T message, UnityObject? context, params string[] tags) =>
-            Log(message, ELogType.Exception, context, tags);
-
-        public static void Log<T>(T message, ELogType logType, params string[] tags) =>
-            Log(message, logType, null, tags);
-
-        public static void Log<T>(T message, ELogType logType, UnityObject? context, params string[] tags)
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        [Conditional("YUZE_LOG_TOOL_ERROR")]
+        [Obsolete("内部调用的方法, 请使用默认的Log方法打印日志!")]
+        public static void LogInternal(object? message, ELogType logType, string[]? tags = null
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+            , UnityObject? context = null
+#endif
+        )
         {
-            var strMessage = message == null ? string.Empty : message.ToString();
+#if YUZE_LOG_TOOL_LOG || YUZE_LOG_TOOL_WARNING || YUZE_LOG_TOOL_ERROR
             switch (logType)
             {
                 case ELogType.Error:
-                    UnityDebug.LogError(strMessage, context);
+                    UnityDebug.LogError(message
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                        , context
+#endif
+                    );
                     break;
+
+#if YUZE_LOG_TOOL_LOG || YUZE_LOG_TOOL_WARNING
                 case ELogType.Warning:
-                    UnityDebug.LogWarning(strMessage, context);
+                    UnityDebug.LogWarning(message
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                        , context
+#endif
+                    );
                     break;
-                case ELogType.Exception:
-                    UnityDebug.LogException(new Exception(strMessage), context);
-                    break;
+#endif
+
+#if YUZE_LOG_TOOL_LOG
                 case ELogType.Log:
                 default:
-                    UnityDebug.Log(strMessage, context);
+                    UnityDebug.Log(message
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                        , context
+#endif
+                    );
                     break;
+#endif
             }
+#endif
         }
 
-        public static Exception ThrowException(this Exception exception, params string[] tags) =>
-            ThrowException(exception, null, tags);
-
-        public static Exception ThrowException(this Exception exception, UnityObject? context, params string[] tags) =>
-            exception;
-
-        public static Exception ThrowWithLogTool(this Exception exception, ILogTool? logTool, params string[] tags) =>
-            logTool == null ? ThrowException(exception, tags) : logTool.ThrowException(exception, tags);
-
-        #region Assert
-
-        private static string? Name(string? name) => name != null ? $"[{nameof(name)}]: {name}, " : null;
-        private static string? Type(Type? type) => type != null ? $"[{nameof(type)}]: {type}, " : null;
-        private static string? Message(string? message) => message != null ? $"[{nameof(message)}]: {message}, " : null;
-
-        private static string? CheckInfo(string? checkInfo) =>
-            checkInfo != null ? $"[{nameof(checkInfo)}]: {checkInfo}, " : null;
 
         // ReSharper disable Unity.PerformanceAnalysis
-        public static T IsNotNull<T>(this T? isNotNull, string? name = null, string? message = null,
-            UnityObject? context = null, bool additionalCheck = true)
-        {
-#if UNITY_EDITOR
-            if (isNotNull == null)
-                UnityDebug.LogException(
-                    new NullReferenceException($"{Name(name)}{Type(typeof(T))}{Message(message)}对应对象为空!"), context);
-            if (additionalCheck)
-                switch (isNotNull)
-                {
-                    case string str when string.IsNullOrWhiteSpace(str):
-                        UnityDebug.LogException(new NullReferenceException(
-                            $"{Name(name)}{Type(typeof(string))}{Message(message)}对应字符串为空或者空白!"), context);
-                        break;
-                    case ICollection { Count: 0 }:
-                        UnityDebug.LogException(
-                            new NullReferenceException($"{Name(name)}{Type(typeof(T))}{Message(message)}对应数组对象长度为0!"),
-                            context);
-                        break;
-                    case IAdditionalCheck check when check.DoAdditionalCheck(out var checkInfo):
-                        UnityDebug.LogException(new NullReferenceException(
-                                $"{Name(name)}{Type(typeof(T))}{Message(message)}{CheckInfo(checkInfo)}对应对象未通过自身检查!"),
-                            context);
-                        break;
-                }
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        [Obsolete("内部调用的方法, 请使用默认的Assert方法进行断言判断!")]
+        public static void AssertInternal([DoesNotReturnIf(false)] bool isTrue, string? name, string? message,
+            string[]? tags = null
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+            , UnityObject? context = null
 #endif
-            return isNotNull!;
-        }
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        public static TCastTo IsNotNull<TCastTo>(this object? isNotNull, string? name = null, string? message = null,
-            UnityObject? context = null, bool additionalCheck = false)
+        )
         {
-            if (isNotNull is TCastTo castTo) return castTo.IsNotNull(name, message, context, additionalCheck);
-
-#if UNITY_EDITOR
-            UnityDebug.LogException(new NullReferenceException(
-                $"{Name(name)}{isNotNull!.GetType()}{Message(message)}无法转化到{typeof(TCastTo)}类型!"), context);
+            if (isTrue) return;
+            UnityDebug.LogException(new Exception($"{(name == null ? null : $"[Name: {name}]")}" +
+                                                  $"{(message == null ? null : $"[Message: {message}]")}")
+#if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
+                , context
 #endif
-            return default!;
+            );
         }
-
-        public static TCastTo IsNotNull<TCastTo>(this object? isNotNull, ILogTool? logTool, string? name = null,
-            string? message = null, bool additionalCheck = false)
-            => logTool == null
-                ? IsNotNull<TCastTo>(isNotNull, name, message, additionalCheck: additionalCheck)
-                : logTool.IsNotNull<TCastTo>(isNotNull, name, message, additionalCheck);
-
-        public static T IsNotNull<T>(this T? isNotNull, ILogTool? logTool, string? name = null, string? message = null,
-            bool additionalCheck = true) =>
-            logTool == null
-                ? IsNotNull(isNotNull, name, message, additionalCheck: additionalCheck)
-                : logTool.IsNotNull(isNotNull, name, message, additionalCheck);
 
         #endregion
 
-        public static T[] ArrayMerge<T>(this T[]? arrayOne, T[]? arrayTwo)
-        {
-            if (arrayOne == null || arrayOne.Length == 0)
-            {
-                return arrayTwo ?? Array.Empty<T>();
-            }
+        #region Log
 
-            if (arrayTwo == null || arrayTwo.Length == 0)
-            {
-                return arrayOne;
-            }
+#pragma warning disable CS0618 // 类型或成员已过时
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        public static void Log(object? message) => LogInternal(message, ELogType.Log);
 
-            var newArray = new T[arrayOne.Length + arrayTwo.Length];
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        public static void Log(object? message, string[]? tags) => LogInternal(message, ELogType.Log, tags);
 
-            for (var index = 0; index < newArray.Length; index++)
-            {
-                if (index < arrayOne.Length)
-                {
-                    newArray[index] = arrayOne[index];
-                }
-                else
-                {
-                    newArray[index] = arrayTwo[index - arrayOne.Length];
-                }
-            }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        public static void LogWarning(object? message) => LogInternal(message, ELogType.Warning);
 
-            return newArray;
-        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        public static void LogWarning(object? message, string[]? tags) => LogInternal(message, ELogType.Warning, tags);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        [Conditional("YUZE_LOG_TOOL_ERROR")]
+        public static void LogError(object? message) => LogInternal(message, ELogType.Error);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_LOG")]
+        [Conditional("YUZE_LOG_TOOL_WARNING")]
+        [Conditional("YUZE_LOG_TOOL_ERROR")]
+        public static void LogError(object? message, string[]? tags) => LogInternal(message, ELogType.Error, tags);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public static void Assert([DoesNotReturnIf(false)] bool isTrue, string? name, string? message) =>
+            AssertInternal(isTrue, name, message);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public static void Assert([DoesNotReturnIf(false)] bool isTrue, string? name, string? message,
+            string[]? tags) => AssertInternal(isTrue, name, message, tags);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public static void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name) =>
+            AssertInternal(isTrue, name, C_IsNull);
+
+        // ReSharper disable Unity.PerformanceAnalysis
+        [HideInCallstack]
+        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
+        public static void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name, string[]? tags) =>
+            AssertInternal(isTrue, name, C_IsNull, tags);
+#pragma warning restore CS0618 // 类型或成员已过时
+
+        #endregion
     }
 }

@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+#nullable enable
+using System;
 using UnityEngine;
 using YuzeToolkit.LogTool;
 
@@ -15,64 +15,67 @@ namespace YuzeToolkit.DriverTool
 
         private static bool s_isInitialize;
         private static MonoDriverManager? s_monoDriverManager;
-        private static readonly List<(IMonoBase, DisposableWaiter)> S_MonoBases = new();
 
-        public static IDisposable Run(IMonoBase monoBase)
+        public static UpdateToken Run(IMonoBase monoBase)
         {
             if (!s_isInitialize)
-            {
-                LogSys.Warning($"没有创建对应的{nameof(MonoDriverManager)}！");
-                var waiter = new DisposableWaiter();
-                S_MonoBases.Add((monoBase, waiter));
-                return waiter;
-            }
-
-            if (S_MonoBases.Count > 0)
-            {
-                foreach (var (sMonoBase, disposableWaiter) in S_MonoBases)
-                {
-                    disposableWaiter.Disposable = s_monoDriverManager!.RunPrivate(sMonoBase);
-                }
-
-                S_MonoBases.Clear();
-            }
-
-            return s_monoDriverManager!.RunPrivate(monoBase);
+                new GameObject("__MonoDriverManager(AutoCreate)__").AddComponent<MonoDriverManager>();
+            LogSys.IsNotNull(s_monoDriverManager != null, nameof(s_monoDriverManager));
+            return s_monoDriverManager.RunPrivate(monoBase);
         }
 
         #endregion
 
-        private void Awake()
-        {
-            Init();
-// #if UNITY_EDITOR
-//             UnityEditor.EditorApplication.playModeStateChanged += PlayModeStateChanged;
-// #endif
-        }
-
-        private void OnDestroy()
-        {
-// #if UNITY_EDITOR
-//             UnityEditor.EditorApplication.playModeStateChanged -= PlayModeStateChanged;
-// #endif
-            Temp();
-        }
+        private void Awake() => Init();
+        private void OnDestroy() => Temp();
 
         private FirstMonoDriver? _first;
         private BeforeMonoDriver? _before;
         private AfterMonoDriver? _after;
         private EndMonoDriver? _end;
-        private bool _initSelf;
+
+        private FirstMonoDriver First
+        {
+            get
+            {
+                LogSys.IsNotNull(_first != null, nameof(_first));
+                return _first;
+            }
+        }
+
+        private BeforeMonoDriver Before
+        {
+            get
+            {
+                LogSys.IsNotNull(_before != null, nameof(_before));
+                return _before;
+            }
+        }
+
+        private AfterMonoDriver After
+        {
+            get
+            {
+                LogSys.IsNotNull(_after != null, nameof(_after));
+                return _after;
+            }
+        }
+
+        private EndMonoDriver End
+        {
+            get
+            {
+                LogSys.IsNotNull(_end != null, nameof(_end));
+                return _end;
+            }
+        }
 
         private void Init()
         {
-            if (_initSelf) return;
-            _initSelf = true;
-
             if (s_isInitialize)
             {
                 Destroy(gameObject);
-                LogSys.Error("驱动器已经存在！", "Utility", "MonoDriverManager");
+                LogSys.LogWarning("驱动器已经存在！");
                 return;
             }
 
@@ -103,9 +106,7 @@ namespace YuzeToolkit.DriverTool
 
         private void Temp()
         {
-            if (!_initSelf) return;
             if (s_monoDriverManager != this) return;
-            _initSelf = false;
             s_isInitialize = false;
             s_monoDriverManager = null;
             Destroy(_first);
@@ -118,45 +119,14 @@ namespace YuzeToolkit.DriverTool
             _end = null;
         }
 
-        private IDisposable RunPrivate(IMonoBase monoBase)
-        {
-            var disposable = LifeCycleBase.Build(monoBase);
-            switch (monoBase.Type)
+        private UpdateToken RunPrivate(IMonoBase monoBase) =>
+            monoBase.Type switch
             {
-                case OrderType.First:
-                    _first.IsNotNull(nameof(_first)).AddMonoBase(disposable);
-                    break;
-                case OrderType.Before:
-                    _before.IsNotNull(nameof(_before)).AddMonoBase(disposable);
-                    break;
-                case OrderType.After:
-                    _after.IsNotNull(nameof(_after)).AddMonoBase(disposable);
-                    break;
-                case OrderType.End:
-                    _end.IsNotNull(nameof(_end)).AddMonoBase(disposable);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException().ThrowException();
-            }
-
-            return disposable;
-        }
-
-        private class DisposableWaiter : IDisposable
-        {
-            public IDisposable? Disposable;
-
-            public void Dispose()
-            {
-                if (Disposable == null)
-                {
-                    LogSys.Warning($"还未获得驱动器的{nameof(IDisposable)}对象！");
-                    return;
-                }
-
-                Disposable.Dispose();
-                Disposable = null;
-            }
-        }
+                EOrderType.First => First.Add(monoBase),
+                EOrderType.Before => Before.Add(monoBase),
+                EOrderType.After => After.Add(monoBase),
+                EOrderType.End => End.Add(monoBase),
+                _ => throw new ArgumentOutOfRangeException()
+            };
     }
 }

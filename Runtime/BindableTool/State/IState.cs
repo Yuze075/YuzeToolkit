@@ -1,5 +1,4 @@
-﻿using System;
-
+#nullable enable
 namespace YuzeToolkit.BindableTool
 {
     /// <summary>
@@ -20,14 +19,15 @@ namespace YuzeToolkit.BindableTool
         /// <param name="priority">判断状态的优先级</param>
         /// <param name="removeSmall">是否为剔除<see cref="priority"/>小的<see cref="ModifyState"/>值</param>
         bool this[int priority, bool removeSmall = true] { get; }
-
+        
         /// <summary>
-        /// 注册一个<see cref="ModifyState"/>, 修饰<see cref="IState"/>的状态值
+        /// 移除绑定的<see cref="ModifyState"/>
         /// </summary>
-        /// <param name="modifyState">修饰<see cref="IState"/>的接口</param>
-        /// <param name="reason"></param>
-        /// <returns>返回<see cref="IDisposable"/>接口,
-        /// 调用<see cref="IDisposable.Dispose"/>方法解除对<see cref="IState"/>状态的修饰</returns>
-        IDisposable Modify(ModifyState modifyState, IModifyReason reason);
+        void RemoveModify(ModifyState modifyState);
+        
+        /// <summary>
+        /// 重新检测对应的属性修正
+        /// </summary>
+        void ReCheckValue();
     }
 }

@@ -1,41 +1,20 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.BindableTool
 {
-    public interface IBindableList<out TValue> : IReadOnlyList<TValue>, IBindable<IBindableList<TValue>>
+    public interface IBindableList<out TValue> : IReadOnlyList<TValue>, IBindable
     {
-        object IBindable.Value => this;
+        [return: NotNullIfNotNull("bindableListChange")]
+        IDisposable? RegisterChange(BindableListChange<TValue>? bindableListChange);
 
-        IDisposable IBindable.RegisterChange(ValueChange<object> valueChange) =>
-            RegisterChange(list => { valueChange.Invoke(list, list); });
+        [return: NotNullIfNotNull("bindableListChange")]
+        IDisposable? RegisterChangeBuff(BindableListChange<TValue>? bindableListChange);
 
-        IDisposable IBindable.RegisterChangeBuff(ValueChange<object> valueChange) =>
-            RegisterChange(list => { valueChange.Invoke(list, list); });
-
-        IBindableList<TValue> IBindable<IBindableList<TValue>>.Value => this;
-
-        IDisposable IBindable<IBindableList<TValue>>.RegisterChange(ValueChange<IBindableList<TValue>> valueChange)
-            => RegisterChange(list => { valueChange.Invoke(list, list); });
-
-        IDisposable IBindable<IBindableList<TValue>>.RegisterChangeBuff(ValueChange<IBindableList<TValue>> valueChange)
-            => RegisterChangeBuff(list => { valueChange.Invoke(list, list); });
-
-        IDisposable RegisterChange(BindableListChange<TValue> bindableListChange);
-        IDisposable RegisterChangeBuff(BindableListChange<TValue> bindableListChange);
-        IDisposable RegisterAdd(AddValue<TValue> addValue);
-        IDisposable RegisterRemove(RemoveValue<TValue> removeValue);
-        IDisposable RegisterChange(ChangeValue<TValue> changeValue);
-        IDisposable RegisterChange(ClearAllValue clearAllValue);
+        [return: NotNullIfNotNull("listChange")]
+        IDisposable? RegisterListChange(ListChange<TValue>? listChange);
     }
-
-    public delegate void BindableListChange<in TValue>(IBindableList<TValue> bindableList);
-
-    public delegate void AddValue<in TValue>(TValue addValue, int index);
-
-    public delegate void RemoveValue<in TValue>(TValue removeValue, int index);
-
-    public delegate void ChangeValue<in TValue>(TValue oldValue, TValue newValue, int index);
-
-    public delegate void ClearAllValue();
 }
