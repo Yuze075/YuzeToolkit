@@ -1,8 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using YuzeToolkit.LogTool;
-using YuzeToolkit.PoolTool;
 
 namespace YuzeToolkit.DriverTool
 {
@@ -49,7 +47,7 @@ namespace YuzeToolkit.DriverTool
         public void Dispose()
         {
 #if UNITY_EDITOR
-            if (!IsActive) LogSys.LogError($"当前的{typeof(MonoWrapper<T>)}已经被释放过了, 无法重新释放!");
+            if (!IsActive) MonoBaseExtensions.LogError($"当前的{typeof(MonoWrapper<T>)}已经被释放过了, 无法重新释放!");
 #endif
             IsActive = false;
 
@@ -57,7 +55,7 @@ namespace YuzeToolkit.DriverTool
             if (_toRemoveIndex == null)
             {
 #if UNITY_EDITOR
-                LogSys.LogError($"当前的{typeof(MonoWrapper<T>)}在释放时,{nameof(_toRemoveIndex)}为空!");
+                MonoBaseExtensions.LogError($"当前的{typeof(MonoWrapper<T>)}在释放时,{nameof(_toRemoveIndex)}为空!");
 #endif
                 return;
             }
@@ -71,7 +69,7 @@ namespace YuzeToolkit.DriverTool
         {
 #if UNITY_EDITOR
             if (IsActive)
-                LogSys.LogError($"当前的{typeof(MonoWrapper<T>)}还绑定着Index{Index}的值, 错误的OnRelease回收!");
+                MonoBaseExtensions.LogError($"当前的{typeof(MonoWrapper<T>)}还绑定着Index{Index}的值, 错误的OnRelease回收!");
 #endif
             _toRemoveIndex = null;
         }

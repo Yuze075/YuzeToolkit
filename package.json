@@ -1,9 +1,9 @@
 {
     "name" : "com.yuzetoolkit",
-    "version": "2.0.0",
+    "version": "0.9.0",
     "displayName" : "YuzeToolkit",
-    "description" : "公用脚本",
-    "unity": "2019.1",
+    "description" : "一个辅助Unity游戏开发的代码库, 里面包含各种辅助游戏开发的Tool",
+    "unity": "2022.3",
     "author": {
         "name": "Yzue",
         "email": "925581968@qq.com",

@@ -2,9 +2,6 @@
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using UnityEngine;
-using UnityDebug = UnityEngine.Debug;
-using UnityObject = UnityEngine.Object;
 
 namespace YuzeToolkit.LogTool
 {
@@ -25,14 +22,14 @@ namespace YuzeToolkit.LogTool
         #region Internal
 
         // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_LOG")]
         [Conditional("YUZE_LOG_TOOL_WARNING")]
         [Conditional("YUZE_LOG_TOOL_ERROR")]
         [Obsolete("内部调用的方法, 请使用默认的Log方法打印日志!")]
         public static void LogInternal(object? message, ELogType logType, string[]? tags = null
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
-            , UnityObject? context = null
+            , UnityEngine.Object? context = null
 #endif
         )
         {
@@ -40,7 +37,7 @@ namespace YuzeToolkit.LogTool
             switch (logType)
             {
                 case ELogType.Error:
-                    UnityDebug.LogError(message
+                    UnityEngine.Debug.LogError(message
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
                         , context
 #endif
@@ -49,7 +46,7 @@ namespace YuzeToolkit.LogTool
 
 #if YUZE_LOG_TOOL_LOG || YUZE_LOG_TOOL_WARNING
                 case ELogType.Warning:
-                    UnityDebug.LogWarning(message
+                    UnityEngine.Debug.LogWarning(message
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
                         , context
 #endif
@@ -60,7 +57,7 @@ namespace YuzeToolkit.LogTool
 #if YUZE_LOG_TOOL_LOG
                 case ELogType.Log:
                 default:
-                    UnityDebug.Log(message
+                    UnityEngine.Debug.Log(message
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
                         , context
 #endif
@@ -73,19 +70,19 @@ namespace YuzeToolkit.LogTool
 
 
         // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
         [Obsolete("内部调用的方法, 请使用默认的Assert方法进行断言判断!")]
         public static void AssertInternal([DoesNotReturnIf(false)] bool isTrue, string? name, string? message,
             string[]? tags = null
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
-            , UnityObject? context = null
+            , UnityEngine.Object? context = null
 #endif
         )
         {
             if (isTrue) return;
-            UnityDebug.LogException(new Exception($"{(name == null ? null : $"[Name: {name}]")}" +
-                                                  $"{(message == null ? null : $"[Message: {message}]")}")
+            UnityEngine.Debug.LogException(new Exception($"{(name == null ? null : $"[Name: {name}]")}" +
+                                                         $"{(message == null ? null : $"[Message: {message}]")}")
 #if UNITY_EDITOR && YUZE_LOG_TOOL_USE_CONTEXT
                 , context
 #endif
@@ -97,65 +94,30 @@ namespace YuzeToolkit.LogTool
         #region Log
 
 #pragma warning disable CS0618 // 类型或成员已过时
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_LOG")]
         public static void Log(object? message) => LogInternal(message, ELogType.Log);
 
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
-        [Conditional("YUZE_LOG_TOOL_LOG")]
-        public static void Log(object? message, string[]? tags) => LogInternal(message, ELogType.Log, tags);
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_LOG")]
         [Conditional("YUZE_LOG_TOOL_WARNING")]
         public static void LogWarning(object? message) => LogInternal(message, ELogType.Warning);
 
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
-        [Conditional("YUZE_LOG_TOOL_LOG")]
-        [Conditional("YUZE_LOG_TOOL_WARNING")]
-        public static void LogWarning(object? message, string[]? tags) => LogInternal(message, ELogType.Warning, tags);
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_LOG")]
         [Conditional("YUZE_LOG_TOOL_WARNING")]
         [Conditional("YUZE_LOG_TOOL_ERROR")]
         public static void LogError(object? message) => LogInternal(message, ELogType.Error);
 
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
-        [Conditional("YUZE_LOG_TOOL_LOG")]
-        [Conditional("YUZE_LOG_TOOL_WARNING")]
-        [Conditional("YUZE_LOG_TOOL_ERROR")]
-        public static void LogError(object? message, string[]? tags) => LogInternal(message, ELogType.Error, tags);
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
         public static void Assert([DoesNotReturnIf(false)] bool isTrue, string? name, string? message) =>
             AssertInternal(isTrue, name, message);
 
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
-        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
-        public static void Assert([DoesNotReturnIf(false)] bool isTrue, string? name, string? message,
-            string[]? tags) => AssertInternal(isTrue, name, message, tags);
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
+        [UnityEngine.HideInCallstack]
         [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
         public static void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name) =>
             AssertInternal(isTrue, name, C_IsNull);
-
-        // ReSharper disable Unity.PerformanceAnalysis
-        [HideInCallstack]
-        [Conditional("YUZE_LOG_TOOL_ASSERT_CHECK")]
-        public static void IsNotNull([DoesNotReturnIf(false)] bool isTrue, string? name, string[]? tags) =>
-            AssertInternal(isTrue, name, C_IsNull, tags);
 #pragma warning restore CS0618 // 类型或成员已过时
 
         #endregion

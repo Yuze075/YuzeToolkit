@@ -1,6 +1,6 @@
 {
     "name": "YuzeToolkit.Editor.Network",
-    "rootNamespace": "",
+    "rootNamespace": "YuzeToolkit.Network",
     "references": [
         "YuzeToolkit",
         "YuzeToolkit.Network",
@@ -20,13 +20,13 @@
     "versionDefines": [
         {
             "name": "com.unity.netcode.gameobjects",
-            "expression": "0.0.0",
-            "define": "YUZE_TOOLKIT_USE_UNITY_NETCODE"
+            "expression": "1.8.0",
+            "define": "YUZE_USE_UNITY_NETCODE"
         },
         {
             "name": "com.browar.editor-toolbox",
             "expression": "0.0.0",
-            "define": "YUZE_TOOLKIT_USE_EDITOR_TOOLBOX"
+            "define": "YUZE_USE_EDITOR_TOOLBOX"
         }
     ],
     "noEngineReferences": false

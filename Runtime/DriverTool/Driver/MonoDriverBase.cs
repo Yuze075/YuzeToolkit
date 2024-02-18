@@ -2,52 +2,16 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DriverTool
 {
-    public struct UpdateToken : IDisposable
-    {
-        public UpdateToken(IDisposable? update, IDisposable? fixedUpdate, IDisposable? lateUpdate)
-        {
-            _update = update;
-            _fixedUpdate = fixedUpdate;
-            _lateUpdate = lateUpdate;
-        }
-
-        private IDisposable? _update;
-        private IDisposable? _fixedUpdate;
-        private IDisposable? _lateUpdate;
-
-        public void Dispose()
-        {
-            if (_update != null)
-            {
-                _update.Dispose();
-                _update = null;
-            }
-            
-            if (_fixedUpdate != null)
-            {
-                _fixedUpdate.Dispose();
-                _fixedUpdate = null;
-            }
-            
-            if (_lateUpdate != null)
-            {
-                _lateUpdate.Dispose();
-                _lateUpdate = null;
-            }
-        }
-    }
-
     /// <summary>
     /// 更新驱动器的基类, 用于派生不同unity默认生命周期更新的子类
     /// </summary>
     public abstract class MonoDriverBase : MonoBehaviour
     {
-        public virtual float DeltaTime => Time.deltaTime;
-        public virtual float FixedDeltaTime => Time.fixedDeltaTime;
+        protected virtual float DeltaTime => Time.deltaTime;
+        protected virtual float FixedDeltaTime => Time.fixedDeltaTime;
 
         public UpdateToken Add(IMonoBase monoBase) =>
             new(AddUpdate(monoBase), AddFixedUpdate(monoBase), AddLateUpdate(monoBase));
@@ -79,13 +43,18 @@ namespace YuzeToolkit.DriverTool
             {
                 var toAdd = _updateWrapperListToAdd[i];
                 var index = _updateWrapperLists.BinarySearch(toAdd, MonoWrapperList<IUpdate>.Comparer);
-                if (index >= 0) throw new SameWrapperListException(toAdd.Priority, toAdd.GetType());
+                if (index >= 0)
+                {
+                    MonoBaseExtensions.LogError($"[{this}]: 已经存在相同的优先级{toAdd.Priority}的{toAdd.GetType()}!");
+                    return;
+                }
+
                 _updateWrapperLists.Insert(~index, toAdd);
             }
 
             _updateWrapperListToAdd.Clear();
 
-            IMonoBase.S_DeltaTime = DeltaTime;
+            IMonoBase.DeltaTime = DeltaTime;
             var listCount = _updateWrapperLists.Count;
             for (var i = 0; i < listCount; i++)
             {
@@ -143,13 +112,18 @@ namespace YuzeToolkit.DriverTool
             {
                 var toAdd = _fixedUpdateWrapperListToAdd[i];
                 var index = _fixedUpdateWrapperLists.BinarySearch(toAdd, MonoWrapperList<IFixedUpdate>.Comparer);
-                if (index >= 0) throw new SameWrapperListException(toAdd.Priority, toAdd.GetType());
+                if (index >= 0)
+                {
+                    MonoBaseExtensions.LogError($"[{this}]: 已经存在相同的优先级{toAdd.Priority}的{toAdd.GetType()}!");
+                    return;
+                }
+
                 _fixedUpdateWrapperLists.Insert(~index, toAdd);
             }
 
             _fixedUpdateWrapperListToAdd.Clear();
 
-            IMonoBase.S_FixedDeltaTime = FixedDeltaTime;
+            IMonoBase.FixedDeltaTime = FixedDeltaTime;
             var listCount = _fixedUpdateWrapperLists.Count;
             for (var i = 0; i < listCount; i++)
             {
@@ -207,13 +181,18 @@ namespace YuzeToolkit.DriverTool
             {
                 var toAdd = _lateUpdateWrapperListToAdd[i];
                 var index = _lateUpdateWrapperLists.BinarySearch(toAdd, MonoWrapperList<ILateUpdate>.Comparer);
-                if (index >= 0) throw new SameWrapperListException(toAdd.Priority, toAdd.GetType());
+                if (index >= 0)
+                {
+                    MonoBaseExtensions.LogError($"[{this}]: 已经存在相同的优先级{toAdd.Priority}的{toAdd.GetType()}!");
+                    return;
+                }
+
                 _lateUpdateWrapperLists.Insert(~index, toAdd);
             }
 
             _lateUpdateWrapperListToAdd.Clear();
 
-            IMonoBase.S_DeltaTime = DeltaTime;
+            IMonoBase.DeltaTime = DeltaTime;
             var listCount = _lateUpdateWrapperLists.Count;
             for (var i = 0; i < listCount; i++)
             {

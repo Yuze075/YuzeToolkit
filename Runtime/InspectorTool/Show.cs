@@ -16,8 +16,11 @@ namespace YuzeToolkit.InspectorTool
             _showValue = IShowValue.GetShowValue(value, 2);
         }
 
-        [Disable] [IgnoreParent] [SerializeReference] [LabelByParent]
-        private IShowValue _showValue;
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable, IgnoreParent, LabelByParent]
+#endif
+        [SerializeReference]
+        private IShowValue? _showValue;
 
         [NonSerialized] private T? _value;
 

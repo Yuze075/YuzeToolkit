@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DriverTool
 {
@@ -38,7 +37,7 @@ namespace YuzeToolkit.DriverTool
         {
 #if UNITY_EDITOR
             if (monoBase.UpdatePriority != Priority)
-                LogSys.LogError($"传入的{monoBase}的优先级为:{monoBase.UpdatePriority}, 不是{this}对应的优先级: {Priority}!");
+                MonoBaseExtensions.LogError($"传入的{monoBase}的优先级为:{monoBase.UpdatePriority}, 不是{this}对应的优先级: {Priority}!");
 #endif
             // 检测是否存在空的MonoWrapper
             if (_nullIndex.Count > 0)
@@ -77,7 +76,7 @@ namespace YuzeToolkit.DriverTool
                 var index = _toRemoveIndex[i];
 #if UNITY_EDITOR
                 if (MonoBases[index] == null)
-                    LogSys.LogError($"优先级为: {Priority}的{this}, 移除的Index{index}, 类型为{typeof(T)}对象为空");
+                    MonoBaseExtensions.LogError($"优先级为: {Priority}的{this}, 移除的Index{index}, 类型为{typeof(T)}对象为空");
 #endif
                 // 将对应IMonoBase设置为空
                 MonoBases[index] = null;
@@ -100,7 +99,7 @@ namespace YuzeToolkit.DriverTool
                     if (!updateWrapper.IsActive) continue;
 #if UNITY_EDITOR
                     if (MonoBases[updateWrapper.Index] != null)
-                        LogSys.LogError($"优先级为: {Priority}的{this}, 重设的Index为{updateWrapper.Index}, 类型为{typeof(T)}对象不为空");
+                        MonoBaseExtensions.LogError($"优先级为: {Priority}的{this}, 重设的Index为{updateWrapper.Index}, 类型为{typeof(T)}对象不为空");
 #endif
                     // 将对于位置的IUpdate替换为目标update
                     MonoBases[updateWrapper.Index] = update;

@@ -1,10 +1,8 @@
 #nullable enable
-using UnityEngine;
-
 namespace YuzeToolkit.DriverTool
 {
-    [DefaultExecutionOrder(-200)]
-    public class FirstMonoDriver : MonoDriverBase
+    [UnityEngine.DefaultExecutionOrder(-200)]
+    public sealed class FirstMonoDriver : MonoDriverBase
     {
     }
 }

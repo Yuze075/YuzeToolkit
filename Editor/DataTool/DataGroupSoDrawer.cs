@@ -1,10 +1,9 @@
 #nullable enable
-#if YUZE_TOOLKIT_USE_EDITOR_TOOLBOX
+#if YUZE_USE_EDITOR_TOOLBOX
 using System;
 using Toolbox.Editor;
 using UnityEditor;
 using UnityEngine;
-using YuzeToolkit.GUITool;
 
 namespace YuzeToolkit.DataTool.Editor
 {

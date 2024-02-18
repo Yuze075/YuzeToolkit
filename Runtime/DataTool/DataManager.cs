@@ -1,10 +1,10 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using YuzeToolkit.IoCTool;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DataTool
 {
@@ -14,109 +14,20 @@ namespace YuzeToolkit.DataTool
 
         private static DataManager? _s_instance;
 
+        /// <summary>
+        /// <see cref="DataManager"/>需要在一个单独的场景(StartUp)中完成单例的加载<br/>
+        /// 此单例在<see cref="Awake"/>的时候绑定单例, 在<see cref="OnDestroy"/>解除单例的绑定<br/>
+        /// 在<see cref="DataManager"/>单例存在时创建其他<see cref="DataManager"/>, 会销毁新创建的<see cref="DataManager"/>的<see cref="DataManager.gameObject"/><br/>
+        /// 在单独场景(StartUp)完成加载之后, 会在整个游戏的生命周期中一直存在
+        /// </summary>
         public static DataManager S_Instance
         {
             get
             {
-                LogSys.IsNotNull(_s_instance != null, nameof(_s_instance));
+                if (_s_instance == null) throw new NullReferenceException($"当前的{nameof(DataManager)}实例不存在！");
                 return _s_instance;
             }
         }
-
-        public static TData? S_GetData<TData>() where TData : IData => S_Instance.Get<TData>();
-
-        public static bool S_TryGetData<TData>([MaybeNullWhen(false)] out TData data) where TData : IData =>
-            S_Instance.TryGet(out data);
-
-        #region IData
-
-        public static int S_GetIndex<TValue>(TValue value) => S_Instance.Get<IData<TValue>>()?.GetIndex(value) ?? -1;
-
-        public static bool S_TryGetIndex<TValue>(TValue value, out int index)
-        {
-            index = -1;
-            return S_Instance.Get<IData<TValue>>()?.TryGetIndex(value, out index) ?? false;
-        }
-
-        public static TValue? S_GetValueByIndex<TValue>(int index, int idHashCode) =>
-            S_Instance.TryGet<IData<TValue>>(out var data)
-                ? data.GetByIndex(index, idHashCode)
-                : default!;
-
-        public static bool S_TryGetValueByIndex<TValue>(int index, int idHashCode,
-            [MaybeNullWhen(false)] out TValue value)
-        {
-            value = default;
-            return S_Instance.Get<IData<TValue>>()?.TryGetByIndex(index, idHashCode, out value)?? false;
-        }
-
-        #endregion
-
-        #region Data
-
-        public static int S_GetIndex<TValue, TId>(TId id) where TValue : IModel<TId> where TId : unmanaged =>
-            S_Instance.Get<Data<TValue, TId>>()?.GetIndex(id) ?? -1;
-
-        public static bool S_TryGetIndex<TValue, TId>(TId id, out int index)
-            where TValue : IModel<TId> where TId : unmanaged
-        {
-            index = -1;
-            return S_Instance.Get<Data<TValue, TId>>()?.TryGetIndex(id, out index) ?? false;
-        }
-
-        public static Data<TValue, TId>? S_GetDataByValue<TValue, TId>()
-            where TValue : IModel<TId> where TId : unmanaged =>
-            S_Instance.Get<Data<TValue, TId>>();
-
-        public static bool S_TryGetDataByValue<TValue, TId>([MaybeNullWhen(false)] out Data<TValue, TId> data)
-            where TValue : IModel<TId> where TId : unmanaged => S_Instance.TryGet(out data);
-
-        public static TValue? S_GetValue<TValue, TId>(TId id) where TValue : IModel<TId> where TId : unmanaged
-        {
-            var data = S_Instance.Get<Data<TValue, TId>>();
-            return data == null ? default : data.Get(id);
-        }
-
-        public static bool S_TryGetValue<TValue, TId>(TId id, [MaybeNullWhen(false)] out TValue value)
-            where TValue : IModel<TId> where TId : unmanaged
-        {
-            value = default;
-            return S_Instance.Get<Data<TValue, TId>>()?.TryGet(id, out value) ?? false;
-        }
-
-        #endregion
-
-        #region StringData
-
-        public static int S_GetIndex<TValue>(string id) where TValue : IModel<string> =>
-            S_Instance.Get<StringData<TValue>>()?.GetIndex(id) ?? -1;
-
-        public static bool S_TryGetIndex<TValue>(string id, out int index) where TValue : IModel<string>
-        {
-            index = -1;
-            return S_Instance.Get<StringData<TValue>>()?.TryGetIndex(id, out index) ?? false;
-        }
-
-        public static StringData<TValue>? S_GetDataByValue<TValue>() where TValue : IModel<string> =>
-            S_Instance.Get<StringData<TValue>>();
-
-        public static bool S_TryGetDataByValue<TValue>([MaybeNullWhen(false)] out StringData<TValue> data)
-            where TValue : IModel<string> => S_Instance.TryGet(out data);
-
-        public static TValue? S_GetValue<TValue>(string id) where TValue : IModel<string>
-        {
-            var data = S_Instance.Get<StringData<TValue>>();
-            return data == null ? default : data.Get(id);
-        }
-
-        public static bool S_TryGetValue<TValue>(string id, [MaybeNullWhen(false)] out TValue value)
-            where TValue : IModel<string>
-        {
-            value = default;
-            return S_Instance.Get<StringData<TValue>>()?.TryGet(id, out value) ?? false;
-        }
-
-        #endregion
 
         #endregion
 
@@ -124,7 +35,10 @@ namespace YuzeToolkit.DataTool
         {
             base.Awake();
             if (_s_instance != null)
-                LogError($"已经存在对应的{nameof(DataManager)}！");
+            {
+                Destroy(gameObject);
+                throw new InvalidOperationException($"当前的{nameof(DataManager)}实例已经存在, 不应该再次进行创建！");
+            }
 
             _s_instance = this;
         }
@@ -136,7 +50,7 @@ namespace YuzeToolkit.DataTool
             base.OnDestroy();
         }
 
-#if YUZE_TOOLKIT_USE_UNITASK
+#if YUZE_USE_UNITASK
         public Cysharp.Threading.Tasks.UniTask InitData(CancellationToken token) => DoInitData(this, token);
         public Cysharp.Threading.Tasks.UniTask InitData() => InitData(destroyCancellationToken);
 #else
@@ -146,13 +60,9 @@ namespace YuzeToolkit.DataTool
         }
 #endif
 
-#if YUZE_TOOLKIT_USE_UNITASK
-#pragma warning disable CS1998 // 异步方法缺少 "await" 运算符，将以同步方式运行
-        protected virtual async Cysharp.Threading.Tasks.UniTask DoInitData(IValueRegister valueRegister,
-            CancellationToken token)
-#pragma warning restore CS1998 // 异步方法缺少 "await" 运算符，将以同步方式运行
-        {
-        }
+#if YUZE_USE_UNITASK
+        protected virtual Cysharp.Threading.Tasks.UniTask DoInitData(IValueRegister valueRegister,
+            CancellationToken token) => default;
 #else
         protected virtual System.Collections.IEnumerator DoInitData(IValueRegister valueRegister)
         {
@@ -177,98 +87,59 @@ namespace YuzeToolkit.DataTool
 
         #region Public
 
-        public TData? GetData<TData>() where TData : IData => Get<TData>();
-        public bool TryGetData<TData>([MaybeNullWhen(false)] out TData data) where TData : IData => TryGet(out data);
-
-        #region IData
-
-        public int GetIndex<TValue>(TValue value) => Get<IData<TValue>>()?.GetIndex(value) ?? -1;
-
         public bool TryGetIndex<TValue>(TValue value, out int index)
         {
+            if (Get<IData<TValue>>() is { } data)
+                return data.TryGetHashInData(value, out index);
+
             index = -1;
-            return Get<IData<TValue>>()?.TryGetIndex(value, out index) ?? false;
+            return false;
         }
 
         public TValue? GetValueByIndex<TValue>(int index, int idHashCode) => TryGet<IData<TValue>>(out var data)
-            ? data.GetByIndex(index, idHashCode)
+            ? data.GetValueByHash(index, idHashCode)
             : default;
 
         public bool TryGetValueByIndex<TValue>(int index, int idHashCode, [MaybeNullWhen(false)] out TValue value)
         {
+            if (Get<IData<TValue>>() is { } data)
+                return data.TryGetValueByHash(index, idHashCode, out value);
+
             value = default;
-            return Get<IData<TValue>>()?.TryGetByIndex(index, idHashCode, out value) ?? false;
+            return false;
         }
 
-        #endregion
-
-        #region Data
-
-        public int GetIndex<TValue, TId>(TId id) where TValue : IModel<TId> where TId : unmanaged =>
-            Get<Data<TValue, TId>>()?.GetIndex(id) ?? -1;
-
-        public bool TryGetIndex<TValue, TId>(TId id, out int index) where TValue : IModel<TId> where TId : unmanaged
+        public bool TryGetIndex<TValue, TId>(TId id, out int index) where TValue : IModel<TId>
         {
+            if (Get<Data<TValue, TId>>() is { } data)
+                return data.TryGetHashInData(id, out index);
+
             index = -1;
-            return Get<Data<TValue, TId>>()?.TryGetIndex(id, out index) ?? false;
+            return false;
         }
 
-        public Data<TValue, TId>? GetDataByValue<TValue, TId>() where TValue : IModel<TId> where TId : unmanaged =>
-            Get<Data<TValue, TId>>();
-
-        public bool TryGetDataByValue<TValue, TId>([MaybeNullWhen(false)] out Data<TValue, TId> data)
-            where TValue : IModel<TId> where TId : unmanaged => TryGet(out data);
-
-        public TValue? GetValue<TValue, TId>(TId id) where TValue : IModel<TId> where TId : unmanaged
-        {
-            var data = Get<Data<TValue, TId>>();
-            return data == null ? default : data.Get(id);
-        }
+        public TValue? GetValue<TValue, TId>(TId id) where TValue : IModel<TId> =>
+            Get<Data<TValue, TId>>() is { } data ? data.Get(id) : default;
 
         public bool TryGetValue<TValue, TId>(TId id, [MaybeNullWhen(false)] out TValue value)
-            where TValue : IModel<TId> where TId : unmanaged
+            where TValue : IModel<TId> where TId : IEquatable<TId>
         {
+            if (Get<Data<TValue, TId>>() is { } data)
+                return data.TryGet(id, out value);
+
             value = default;
-            return Get<Data<TValue, TId>>()?.TryGet(id, out value) ?? false;
+            return false;
         }
 
-        #endregion
+        public Data<TValue, TId>? GetData<TValue, TId>() where TValue : IModel<TId> =>
+            Get<Data<TValue, TId>>();
 
-        #region StringData
-
-        public int GetIndex<TValue>(string id) where TValue : IModel<string> =>
-            Get<StringData<TValue>>()?.GetIndex(id) ?? -1;
-
-        public bool TryGetIndex<TValue>(string id, out int index) where TValue : IModel<string>
-        {
-            index = -1;
-            return Get<StringData<TValue>>()?.TryGetIndex(id, out index) ?? false;
-        }
-
-        public StringData<TValue>? GetDataByValue<TValue>() where TValue : IModel<string> =>
-            Get<StringData<TValue>>();
-
-        public bool TryGetDataByValue<TValue>([MaybeNullWhen(false)] out StringData<TValue> data)
-            where TValue : IModel<string> => TryGet(out data);
-
-        public TValue? GetValue<TValue>(string id) where TValue : IModel<string>
-        {
-            var data = Get<StringData<TValue>>();
-            return data == null ? default : data.Get(id);
-        }
-
-        public bool TryGetValue<TValue>(string id, [MaybeNullWhen(false)] out TValue value)
-            where TValue : IModel<string>
-        {
-            value = default;
-            return Get<StringData<TValue>>()?.TryGet(id, out value) ?? false;
-        }
-
-        #endregion
+        public bool TryGetData<TValue, TId>([MaybeNullWhen(false)] out Data<TValue, TId> data)
+            where TValue : IModel<TId> => TryGet(out data);
 
         #endregion
     }
-    
+
     public interface IValueRegister
     {
         void RegisterValue<TValue>(TValue value);

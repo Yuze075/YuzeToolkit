@@ -2,12 +2,12 @@
     "name": "YuzeToolkit",
     "rootNamespace": "YuzeToolkit",
     "references": [
-        "Toolbox",
-        "UniTask"
+        "UniTask",
+        "Toolbox"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
@@ -15,13 +15,13 @@
     "versionDefines": [
         {
             "name": "com.cysharp.unitask",
-            "expression": "0.0.0",
-            "define": "YUZE_TOOLKIT_USE_UNITASK"
+            "expression": "2.5.0",
+            "define": "YUZE_USE_UNITASK"
         },
         {
             "name": "com.browar.editor-toolbox",
             "expression": "0.0.0",
-            "define": "YUZE_TOOLKIT_USE_EDITOR_TOOLBOX"
+            "define": "YUZE_USE_EDITOR_TOOLBOX"
         }
     ],
     "noEngineReferences": false

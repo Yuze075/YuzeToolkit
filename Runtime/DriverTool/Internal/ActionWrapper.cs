@@ -5,46 +5,52 @@ namespace YuzeToolkit.DriverTool
 {
     internal class ActionUpdateWrapper : IUpdate
     {
-        public ActionUpdateWrapper(Action action, int priority, EOrderType type)
+        public ActionUpdateWrapper(Action action, int priority, EOrderType updateOrderType)
         {
             _action = action;
-            UpdatePriority = priority;
-            Type = type;
+            _updatePriority = priority;
+            _updateOrderType = updateOrderType;
         }
 
         public void OnUpdate() => _action();
         private readonly Action _action;
-        public int UpdatePriority { get; }
-        public EOrderType Type { get; }
+        private readonly int _updatePriority;
+        private readonly EOrderType _updateOrderType;
+        int IMonoBase.UpdatePriority => _updatePriority;
+        EOrderType IMonoBase.UpdateOrderType => _updateOrderType;
     }
 
     internal class ActionFixedUpdateWrapper : IFixedUpdate
     {
-        public ActionFixedUpdateWrapper(Action action, int priority, EOrderType type)
+        public ActionFixedUpdateWrapper(Action action, int priority, EOrderType updateOrderType)
         {
             _action = action;
-            UpdatePriority = priority;
-            Type = type;
+            _updatePriority = priority;
+            _updateOrderType = updateOrderType;
         }
 
         public void OnFixedUpdate() => _action();
         private readonly Action _action;
-        public int UpdatePriority { get; }
-        public EOrderType Type { get; }
+        private readonly int _updatePriority;
+        private readonly EOrderType _updateOrderType;
+        int IMonoBase.UpdatePriority => _updatePriority;
+        EOrderType IMonoBase.UpdateOrderType => _updateOrderType;
     }
 
     internal class ActionLateUpdateWrapper : ILateUpdate
     {
-        public ActionLateUpdateWrapper(Action action, int priority, EOrderType type)
+        public ActionLateUpdateWrapper(Action action, int priority, EOrderType updateOrderType)
         {
             _action = action;
-            UpdatePriority = priority;
-            Type = type;
+            _updatePriority = priority;
+            _updateOrderType = updateOrderType;
         }
 
         public void OnLateUpdate() => _action();
         private readonly Action _action;
-        public int UpdatePriority { get; }
-        public EOrderType Type { get; }
+        private readonly int _updatePriority;
+        private readonly EOrderType _updateOrderType;
+        int IMonoBase.UpdatePriority => _updatePriority;
+        EOrderType IMonoBase.UpdateOrderType => _updateOrderType;
     }
 }

@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using UnityEngine;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DriverTool
 {
@@ -13,15 +12,17 @@ namespace YuzeToolkit.DriverTool
     {
         #region static
 
-        private static bool s_isInitialize;
-        private static MonoDriverManager? s_monoDriverManager;
+        private static bool _s_isInitialize;
+        private static MonoDriverManager? _s_monoDriverManager;
 
         public static UpdateToken Run(IMonoBase monoBase)
         {
-            if (!s_isInitialize)
+            if (!_s_isInitialize)
                 new GameObject("__MonoDriverManager(AutoCreate)__").AddComponent<MonoDriverManager>();
-            LogSys.IsNotNull(s_monoDriverManager != null, nameof(s_monoDriverManager));
-            return s_monoDriverManager.RunPrivate(monoBase);
+#if UNITY_EDITOR
+            MonoBaseExtensions.IsNotNull(_s_monoDriverManager != null, nameof(_s_monoDriverManager));
+#endif
+            return _s_monoDriverManager.RunPrivate(monoBase);
         }
 
         #endregion
@@ -38,7 +39,7 @@ namespace YuzeToolkit.DriverTool
         {
             get
             {
-                LogSys.IsNotNull(_first != null, nameof(_first));
+                MonoBaseExtensions.IsNotNull(_first != null, nameof(_first));
                 return _first;
             }
         }
@@ -47,7 +48,7 @@ namespace YuzeToolkit.DriverTool
         {
             get
             {
-                LogSys.IsNotNull(_before != null, nameof(_before));
+                MonoBaseExtensions.IsNotNull(_before != null, nameof(_before));
                 return _before;
             }
         }
@@ -56,7 +57,7 @@ namespace YuzeToolkit.DriverTool
         {
             get
             {
-                LogSys.IsNotNull(_after != null, nameof(_after));
+                MonoBaseExtensions.IsNotNull(_after != null, nameof(_after));
                 return _after;
             }
         }
@@ -65,17 +66,17 @@ namespace YuzeToolkit.DriverTool
         {
             get
             {
-                LogSys.IsNotNull(_end != null, nameof(_end));
+                MonoBaseExtensions.IsNotNull(_end != null, nameof(_end));
                 return _end;
             }
         }
 
         private void Init()
         {
-            if (s_isInitialize)
+            if (_s_isInitialize)
             {
                 Destroy(gameObject);
-                LogSys.LogWarning("驱动器已经存在！");
+                MonoBaseExtensions.LogError("驱动器已经存在！");
                 return;
             }
 
@@ -100,15 +101,15 @@ namespace YuzeToolkit.DriverTool
             }
 
             DontDestroyOnLoad(gameObject);
-            s_isInitialize = true;
-            s_monoDriverManager = this;
+            _s_isInitialize = true;
+            _s_monoDriverManager = this;
         }
 
         private void Temp()
         {
-            if (s_monoDriverManager != this) return;
-            s_isInitialize = false;
-            s_monoDriverManager = null;
+            if (_s_monoDriverManager != this) return;
+            _s_isInitialize = false;
+            _s_monoDriverManager = null;
             Destroy(_first);
             Destroy(_before);
             Destroy(_after);
@@ -120,7 +121,7 @@ namespace YuzeToolkit.DriverTool
         }
 
         private UpdateToken RunPrivate(IMonoBase monoBase) =>
-            monoBase.Type switch
+            monoBase.UpdateOrderType switch
             {
                 EOrderType.First => First.Add(monoBase),
                 EOrderType.Before => Before.Add(monoBase),

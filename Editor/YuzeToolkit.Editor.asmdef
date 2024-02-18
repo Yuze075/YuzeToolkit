@@ -1,6 +1,6 @@
 {
     "name": "YuzeToolkit.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "YuzeToolkit",
     "references": [
         "YuzeToolkit",
         "Toolbox",
@@ -10,7 +10,7 @@
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
@@ -19,7 +19,7 @@
         {
             "name": "com.browar.editor-toolbox",
             "expression": "0.0.0",
-            "define": "YUZE_TOOLKIT_USE_EDITOR_TOOLBOX"
+            "define": "YUZE_USE_EDITOR_TOOLBOX"
         }
     ],
     "noEngineReferences": false

@@ -1,16 +1,13 @@
 #nullable enable
-using System;
 using System.Diagnostics.CodeAnalysis;
-using UnityEngine;
 using YuzeToolkit.EventTool;
 using YuzeToolkit.IoCTool;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.UITool
 {
     /// <summary>
     /// 框架的核心底层接口，用于将各个组件统一组合在一起<br/>
-    /// 可以注册不同的组件，例如: <see cref="IUIModel"/> 等，也可以获取对应的组件（通过<see cref="Rule"/>下的拓展方法）<br/>
+    /// 可以注册不同的组件，例如: <see cref="IUIModelBase"/> 等，也可以获取对应的组件（通过<see cref="Rule"/>下的拓展方法）<br/>
     /// 框架核心逻辑为泛型单例，继承泛型实现之后，每个泛型单独用于一个自己的<see cref="IUICore"/>，所有应该给每个面板单独继承一个<see cref="IUICore"/><br/>
     /// <code>
     /// 框架：
@@ -27,11 +24,13 @@ namespace YuzeToolkit.UITool
     /// Controller --Command--> Utility （访问外部逻辑）
     /// </code>
     /// </summary>
-    public interface IUICore : IEventSystemOwner
+    public interface IUICore : IEventNode
     {
-        TModel? GetModel<TModel>() where TModel : IUIModel;
+        TModel? GetModel<TModel>() where TModel : IUIModelBase;
         TUtility? GetUtility<TUtility>() where TUtility : IUIUtility;
-        bool TryGetModel<TModel>([MaybeNullWhen(false), NotNullWhen(true)] out TModel model) where TModel : IUIModel;
+
+        bool TryGetModel<TModel>([MaybeNullWhen(false), NotNullWhen(true)] out TModel model)
+            where TModel : IUIModelBase;
 
         bool TryGetUtility<TUtility>([MaybeNullWhen(false), NotNullWhen(true)] out TUtility utility)
             where TUtility : IUIUtility;
@@ -53,11 +52,12 @@ namespace YuzeToolkit.UITool
             belongUICore.Core = this;
         }
 
-        public TModel? GetModel<TModel>() where TModel : IUIModel => Get<TModel>();
+        EventActionDictionary IEventNode.EventActions { get; } = new();
+        public TModel? GetModel<TModel>() where TModel : IUIModelBase => Get<TModel>();
         public TUtility? GetUtility<TUtility>() where TUtility : IUIUtility => Get<TUtility>();
 
         public bool TryGetModel<TModel>([MaybeNullWhen(false), NotNullWhen(true)] out TModel model)
-            where TModel : IUIModel => TryGet(out model);
+            where TModel : IUIModelBase => TryGet(out model);
 
         public bool TryGetUtility<TUtility>([MaybeNullWhen(false), NotNullWhen(true)] out TUtility utility)
             where TUtility : IUIUtility => TryGet(out utility);
@@ -83,16 +83,9 @@ namespace YuzeToolkit.UITool
 
         #endregion
 
-        #region Event
-
-        [IgnoreParent] [SerializeField] private EventSystem? eventSystem;
-        public EventSystem EventSystem => eventSystem ?? new EventSystem();
-
-        #endregion
-
         protected override void OnDestroy()
         {
-            ((IDisposable?)eventSystem)?.Dispose();
+            this.ClearAllEvents();
             base.OnDestroy();
         }
     }

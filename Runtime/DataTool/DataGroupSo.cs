@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityObject = UnityEngine.Object;
 using UnityComponent = UnityEngine.Component;
 
-namespace YuzeToolkit
+namespace YuzeToolkit.DataTool
 {
-    public abstract class DataGroupSo : SoBase
+    public abstract class DataGroupSo : ScriptableObject
     {
 #if UNITY_EDITOR
         [UnityEditor.MenuItem(nameof(YuzeToolkit) + "/" + nameof(RecheckData))]
@@ -26,13 +27,13 @@ namespace YuzeToolkit
         }
 
         private static IEnumerable<TTarget> GetUnityObjectInPath<TTarget>(params string[]? searchInFolders)
-            where TTarget : Object => UnityEditor.AssetDatabase.FindAssets($"t:{typeof(TTarget).Name}", searchInFolders)
+            where TTarget : UnityObject => UnityEditor.AssetDatabase.FindAssets($"t:{typeof(TTarget).Name}", searchInFolders)
             .Select(guid => UnityEditor.AssetDatabase.LoadAssetAtPath<TTarget>
                 (UnityEditor.AssetDatabase.GUIDToAssetPath(guid)));
 
         // ReSharper disable Unity.PerformanceAnalysis
         private static IEnumerable<TTarget> GetUnityComponentInPath<TTarget>(params string[]? searchInFolders)
-            where TTarget : Component => UnityEditor.AssetDatabase
+            where TTarget : UnityComponent => UnityEditor.AssetDatabase
             .FindAssets($"t:{nameof(GameObject)}", searchInFolders)
             .Select(guid => UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>
                 (UnityEditor.AssetDatabase.GUIDToAssetPath(guid)).GetComponent<TTarget>())
@@ -48,11 +49,12 @@ namespace YuzeToolkit
             return array;
         }
 
-        private protected static bool ReloadUnityObject<TTarget>(ref List<TTarget> list,
-            params string[]? searchInFolders) where TTarget : Object
+        private protected static bool ReloadUnityObject<TTarget>(ref List<TTarget> list, string[]? searchInFolders)
+            where TTarget : UnityObject
         {
             var isDirty = false;
             var newList = new List<TTarget>();
+            if (list.Any(target => target == null)) isDirty = true;
             foreach (var target in GetUnityObjectInPath<TTarget>(AddAssetsPath(searchInFolders)))
             {
                 if (!newList.Contains(target)) newList.Add(target);
@@ -64,11 +66,12 @@ namespace YuzeToolkit
             return isDirty;
         }
 
-        private protected static bool ReloadUnityComponent<TTarget>(ref List<TTarget> list,
-            params string[]? searchInFolders) where TTarget : Component
+        private protected static bool ReloadUnityComponent<TTarget>(ref List<TTarget> list, string[]? searchInFolders)
+            where TTarget : UnityComponent
         {
             var isDirty = false;
             var newList = new List<TTarget>();
+            if (list.Any(target => target == null)) isDirty = true;
             foreach (var target in GetUnityComponentInPath<TTarget>(AddAssetsPath(searchInFolders)))
             {
                 if (newList.Contains(target)) continue;
@@ -88,7 +91,10 @@ namespace YuzeToolkit
     public abstract class DataGroupSo<TSo, TInterface> : DataGroupSo, IEnumerable<TInterface>
         where TSo : ScriptableObject, TInterface
     {
-        [SerializeField] [ReorderableList] [InLineEditor]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [ReorderableList, InLineEditor]
+#endif
+        [SerializeField]
         private List<TSo> sos = new();
 
         public IReadOnlyList<TInterface> Sos => sos;
@@ -98,7 +104,10 @@ namespace YuzeToolkit
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 #if UNITY_EDITOR
-        [EditorButton(nameof(DoRecheckData))] [Directory] [SerializeField] [ReorderableList]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [EditorButton(nameof(DoRecheckData)), Directory, ReorderableList]
+#endif
+        [SerializeField]
         private string[]? paths;
 
         private protected override bool DoRecheckData() => ReloadUnityObject(ref sos, paths);
@@ -108,12 +117,18 @@ namespace YuzeToolkit
     public abstract class DataGroupSo<TSo, TComponent, TInterface> : DataGroupSo, IEnumerable<TInterface>
         where TSo : ScriptableObject, TInterface where TComponent : UnityComponent, TInterface
     {
-        [SerializeField] [ReorderableList] [InLineEditor]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [ReorderableList, InLineEditor]
+#endif
+        [SerializeField]
         private List<TSo> sos = new();
 
         public IReadOnlyList<TInterface> Sos => sos;
 
-        [SerializeField] [ReorderableList] [InLineEditor]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [ReorderableList, InLineEditor]
+#endif
+        [SerializeField]
         private List<TComponent> components = new();
 
         public IReadOnlyList<TInterface> Components => components;
@@ -126,7 +141,10 @@ namespace YuzeToolkit
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 #if UNITY_EDITOR
-        [EditorButton(nameof(DoRecheckData))] [Directory] [SerializeField] [ReorderableList]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [EditorButton(nameof(DoRecheckData)), Directory, ReorderableList]
+#endif
+        [SerializeField]
         private string[]? paths;
 
         private protected override bool DoRecheckData() =>

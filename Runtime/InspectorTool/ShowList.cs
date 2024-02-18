@@ -13,7 +13,7 @@ namespace YuzeToolkit.InspectorTool
         public ShowList(IEnumerable<T> enumerable)
         {
 #if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
-            _showList = new List<IShowValue>();
+            _showList = new List<IShowValue?>();
 #endif
             _nativeList = new List<T>();
             foreach (var t in enumerable) Add(t);
@@ -22,20 +22,20 @@ namespace YuzeToolkit.InspectorTool
         public ShowList(int capacity)
         {
 #if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
-            _showList = new List<IShowValue>(capacity);
+            _showList = new List<IShowValue?>(capacity);
 #endif
             _nativeList = new List<T>(capacity);
         }
 
 #if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
-        [Disable]
-        [LabelByParent]
-        [IgnoreParent]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable, LabelByParent, IgnoreParent,
+         ReorderableList(fixedSize: true, draggable: false)]
+#endif
         [SerializeReference]
-        [ReorderableList(fixedSize: true, draggable: false, HasLabels = false)]
-        private List<IShowValue>? _showList;
+        private List<IShowValue?>? _showList;
 
-        private List<IShowValue> ShowValueList => _showList ??= new List<IShowValue>();
+        private List<IShowValue?> ShowValueList => _showList ??= new List<IShowValue?>();
 #endif
         [NonSerialized] private List<T>? _nativeList;
         public List<T> NativeList => _nativeList ??= new List<T>();
@@ -92,12 +92,13 @@ namespace YuzeToolkit.InspectorTool
             _nativeList?.Clear();
         }
 
-        public IEnumerator<T> GetEnumerator() => NativeList.GetEnumerator();
+        public List<T>.Enumerator GetEnumerator() => NativeList.GetEnumerator();
 
         public bool Equals(ShowList<T> other) => _nativeList == other._nativeList;
         public override bool Equals(object? obj) => obj is ShowList<T> other && Equals(other);
         public override int GetHashCode() => _nativeList?.GetHashCode() ?? 0;
         public static bool operator ==(ShowList<T> left, ShowList<T> right) => left._nativeList == right._nativeList;
         public static bool operator !=(ShowList<T> left, ShowList<T> right) => left._nativeList != right._nativeList;
+        public static implicit operator List<T>(ShowList<T> showList) => showList.NativeList;
     }
 }

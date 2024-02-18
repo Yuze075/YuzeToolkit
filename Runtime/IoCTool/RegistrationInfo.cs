@@ -20,18 +20,16 @@ namespace YuzeToolkit.IoCTool
             AddInterfaceType(RegisteredType);
         }
 
-        public ELifetime Lifetime { get; }
-        public object Value { get; }
-        public List<Type> InterfaceTypes { get; }
-        public Type SelfType { get; }
-        public Type RegisteredType { get; }
+        internal ELifetime Lifetime { get; }
+        internal object Value { get; }
+        internal List<Type> InterfaceTypes { get; }
+        internal Type SelfType { get; }
+        internal Type RegisteredType { get; }
 
-        public void AddInterfaceType(Type interfaceType)
+        internal void AddInterfaceType(Type interfaceType)
         {
             if (!interfaceType.IsAssignableFrom(SelfType))
-            {
-                throw new IoCException($"{SelfType}不继承自{interfaceType}");
-            }
+                throw new ArgumentOutOfRangeException($"{SelfType}不继承自{interfaceType}");
 
             if (!InterfaceTypes.Contains(interfaceType)) InterfaceTypes.Add(interfaceType);
         }

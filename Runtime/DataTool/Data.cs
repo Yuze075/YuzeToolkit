@@ -3,160 +3,206 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
-using YuzeToolkit.InspectorTool;
-using YuzeToolkit.LogTool;
 
 namespace YuzeToolkit.DataTool
 {
-#if USE_SERIALIZABLE_VALUE && UNITY_EDITOR
-    [Serializable]
-#endif
-    public abstract class Data<TValue, TId> : IData<TValue> where TValue : IModel<TId> where TId : unmanaged
+    public abstract class Data<TValue, TId> : IData<TValue>
+        where TValue : IModel<TId>
     {
-        protected Data()
-        {
-            Logging = new Logging(new[] { GetType().FullName });
-        }
+        private readonly Dictionary<int, int> _valuesIndex = new();
+#if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
+#if YUZE_USE_EDITOR_TOOLBOX
+        [IgnoreParent]
+#endif
+        [SerializeField]
+        InspectorTool.ShowList<TValue>
+#else
+        readonly System.Collections.Generic.List<TValue>
+#endif
+            _values = new();
 
-        protected Data(ILogging? loggingParent)
-        {
-            Logging = new Logging(new[] { GetType().FullName }, loggingParent);
-        }
-
-        [IgnoreParent] [SerializeField] private ShowIndexMap<TId, TValue> values;
-        protected Logging Logging { get; set; }
-        public IReadOnlyList<TValue> Values => values.Values;
+        public IReadOnlyList<TValue> Values => (List<TValue>)_values;
 
         /// <summary>
         /// 检测Id是否合法(不合法返回False， 合法返回Ture
         /// </summary>
         protected abstract bool CheckId(TId id);
 
+        protected abstract int IdHashCode(TId id);
+        protected abstract bool EqualId(TId id1, TId id2);
+
         public TValue? this[TId id] => Get(id);
 
         public TValue? Get(TId id)
         {
             if (!CheckId(id))
+                throw new ArgumentOutOfRangeException($"[{this}]: Key为{id}, 不合法!");
+
+            var idHashCode = IdHashCode(id);
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out var index))
             {
-                Logging.LogWarning($"Key为{id}值不合法!");
-                return default;
+                var indexValue = _values[index];
+                if (EqualId(id, indexValue.Id)) return indexValue;
+
+                idHashCode += Pow(2, i++);
             }
 
-            if (values.TryGetValue(id, out var value)) return value;
-
-            Logging.LogWarning($"无法获取到Key值为{id}对应的Value!");
             return default;
         }
 
         public bool TryGet(TId id, [MaybeNullWhen(false)] out TValue value)
         {
             if (!CheckId(id))
+                throw new ArgumentOutOfRangeException($"[{this}]: Key为{id}, 不合法!");
+
+            var idHashCode = IdHashCode(id);
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out var index))
             {
-                Logging.LogWarning($"Key为{id}值不合法!");
-                value = default;
-                return false;
+                var indexValue = _values[index];
+                if (EqualId(id, indexValue.Id))
+                {
+                    value = indexValue;
+                    return true;
+                }
+
+                idHashCode += Pow(2, i++);
             }
 
-            return values.TryGetValue(id, out value);
-        }
-
-        public int GetIndex(TId id)
-        {
-            var index = values.GetIndex(id);
-            if (index >= 0) return index;
-
-            Logging.LogWarning($"无法获取到Key值为{id}对应的ValueIndex!");
-            return -1;
-        }
-
-        public bool TryGetIndex(TId id, out int index)
-        {
-            index = values.GetIndex(id);
-            if (index >= 0) return true;
-
-            Logging.LogWarning($"无法获取到Key值为{id}对应的ValueIndex!");
+            value = default;
             return false;
         }
 
+        public bool TryGetHashInData(TId id, out int hashInData)
+        {
+            if (!CheckId(id))
+                throw new ArgumentOutOfRangeException($"[{this}]: Key为{id}, 不合法!");
+
+            var idHashCode = IdHashCode(id);
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out var index))
+            {
+                if (EqualId(id, _values[index].Id))
+                {
+                    hashInData = idHashCode;
+                    return true;
+                }
+
+                idHashCode += Pow(2, i++);
+            }
+
+            hashInData = default;
+            return false;
+        }
 
         #region IData<TValue>
 
-        public int GetIndex(TValue value) => GetIndex(value.Id);
-        public bool TryGetIndex(TValue value, out int index) => TryGetIndex(value.Id, out index);
+        public bool TryGetHashInData(TValue value, out int hashInData) => TryGetHashInData(value.Id, out hashInData);
 
-        public TValue? GetByIndex(int index, int idHashCode)
+        public TValue? GetValueByHash(int hashInData, int idHashCode)
         {
-            if (index < 0 || index >= values.Count)
+            if (hashInData < 0 || hashInData >= _values.Count)
+                throw new ArgumentOutOfRangeException($"[{this}]: 尝试获取的index:{hashInData}超出范围!");
+
+            if (_valuesIndex.TryGetValue(hashInData, out var index))
             {
-                Logging.LogWarning($"尝试获取的index:{index}超出范围!");
-                return default;
+                var indexValue = _values[index];
+                if (IdHashCode(indexValue.Id) == idHashCode) return indexValue;
             }
 
-            var value = values.GetByIndex(index);
-            if (value.Id.GetFixedHashCode() != idHashCode)
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out index))
             {
-                Logging.LogWarning($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!");
-                return default;
+                var indexValue = _values[index];
+                if (IdHashCode(indexValue.Id) == idHashCode) return indexValue;
+                idHashCode += Pow(2, i++);
             }
 
-            return value;
+            return default;
         }
 
-        public bool TryGetByIndex(int index, int idHashCode, [MaybeNullWhen(false)] out TValue value)
+        public bool TryGetValueByHash(int hashInData, int idHashCode, [MaybeNullWhen(false)] out TValue value)
         {
-            if (index < 0 || index >= values.Count)
+            if (hashInData < 0 || hashInData >= _values.Count)
+                throw new ArgumentOutOfRangeException($"[{this}]: 尝试获取的index:{hashInData}超出范围!");
+
+            if (_valuesIndex.TryGetValue(hashInData, out var index))
             {
-                Logging.LogWarning($"尝试获取的index:{index}超出范围!");
-                value = default;
-                return false;
+                var indexValue = _values[index];
+                if (IdHashCode(indexValue.Id) == idHashCode)
+                {
+                    value = indexValue;
+                    return true;
+                }
             }
 
-            value = values.GetByIndex(index);
-            if (value.Id.GetFixedHashCode() == idHashCode) return true;
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out index))
+            {
+                var indexValue = _values[index];
+                if (IdHashCode(indexValue.Id) == idHashCode)
+                {
+                    value = indexValue;
+                    return true;
+                }
 
-            Logging.LogWarning($"尝试获取的index:{index}获取到的Id的hashCode和idHashCode不相同!");
+                idHashCode += Pow(2, i++);
+            }
+
+            value = default;
             return false;
         }
 
         void IData<TValue>.RegisterValue(TValue value)
         {
-            if (values.TryGetValue(value.Id, out var v))
-            {
-                if (value.Equals(v)) return;
+            var id = value.Id;
+            if (!CheckId(id))
+                throw new ArgumentOutOfRangeException($"[{this}]: Key为{id}, 不合法!");
 
-                Logging.LogError($"存在相同key值{value.Id}的{typeof(TValue)}的值!");
-                return;
+            var idHashCode = IdHashCode(id);
+            var i = 0;
+            while (_valuesIndex.TryGetValue(idHashCode, out var index))
+            {
+                var indexValue = _values[index];
+                var indexId = indexValue.Id;
+                if (EqualId(id, indexId) && !(ReferenceEquals(value, indexValue) || value.Equals(indexValue)))
+                    throw new ArgumentException(
+                        $"[{this}]: 存在相同key值{value.Id}的{typeof(TValue)}的值!(原值:{indexValue}, 新值:{value})");
+
+                idHashCode += Pow(2, i++);
             }
 
-            values.Add(value.Id, value);
+            _valuesIndex.Add(idHashCode, _values.Count);
+            _values.Add(value);
         }
+
 
         void IData<TValue>.RegisterValues(IEnumerable<TValue> values)
         {
-            foreach (var value in values)
-            {
-                if (this.values.TryGetValue(value.Id, out var v))
-                {
-                    if (value.Equals(v)) continue;
-
-                    Logging.LogError($"存在相同key值{value.Id}的{typeof(TValue)}的值!");
-                    continue;
-                }
-
-                this.values.Add(value.Id, value);
-            }
+            foreach (var value in values) ((IData<TValue>)this).RegisterValue(value);
         }
 
         #endregion
-
-        #region IData
 
         void IData.Clear()
         {
-            Logging.Log($"清空数据类型为{typeof(TValue)}的{typeof(Data<TValue, TId>)}!");
-            values.Clear();
+            _valuesIndex.Clear();
+            _values.Clear();
         }
 
-        #endregion
+        private static int Pow(int x, int p)
+        {
+            var sum = 1;
+            for (var i = 0; i < p; i++) sum *= x;
+            return sum;
+        }
+    }
+
+    public abstract class StringData<TValue> : Data<TValue, string> where TValue : IModel<string>
+    {
+        protected override bool CheckId(string id) => !string.IsNullOrWhiteSpace(id);
+        protected sealed override int IdHashCode(string id) => DataHashCode.Get(id);
+        protected sealed override bool EqualId(string id1, string id2) => id1 == id2;
     }
 }

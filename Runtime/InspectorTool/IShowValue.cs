@@ -2,15 +2,12 @@
 #pragma warning disable CS0414 // 定义了成员但是未使用
 #if UNITY_EDITOR && YUZE_INSPECTOR_TOOL_USE_SHOW_VALUE
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using YuzeToolkit.SerializeTool;
-using UnityObject = UnityEngine.Object;
 
 namespace YuzeToolkit.InspectorTool
 {
     [Serializable]
-    public struct ShowKeyValuePair
+    internal struct ShowKeyValuePair
     {
         public static ShowKeyValuePair GetKeyValuePair<TKey, TValue>(TKey key, TValue value) => new()
         {
@@ -18,23 +15,30 @@ namespace YuzeToolkit.InspectorTool
             _value = IShowValue.GetShowValue(value)
         };
 
-        [Line] [IgnoreParent] [SerializeReference]
-        private IShowValue _key;
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Line, IgnoreParent]
+#endif
+        [SerializeReference]
+        private IShowValue? _key;
 
-        [IgnoreParent] [SerializeReference] private IShowValue _value;
+#if YUZE_USE_EDITOR_TOOLBOX
+        [IgnoreParent] 
+#endif
+        [SerializeReference]
+        private IShowValue? _value;
     }
 
-    public interface IShowValue
+    internal interface IShowValue
     {
         /// <summary>
         /// 获取一个序列化显示一个标签为Value的值
         /// </summary>
         /// <param name="tValue">需要序列化显示的值(可以是UnityObject也可以是SystemObject)</param>
         /// <param name="upLayers">向上查询的层数</param>
-        public static IShowValue GetShowValue<T>(T tValue, int upLayers = 1) => tValue switch
+        public static IShowValue? GetShowValue<T>(T tValue, int upLayers = 1) => tValue switch
         {
-            null => null!,
-            UnityObject value => new UnityObjectValue(value, upLayers),
+            null => null,
+            UnityEngine.Object value => new UnityObjectValue(value, upLayers),
             string value => new StringValue(value, upLayers),
             bool value => new BoolValue(value, upLayers),
             char value => new CharValue(value, upLayers),
@@ -51,60 +55,63 @@ namespace YuzeToolkit.InspectorTool
             decimal value => new DecimalValue(value, upLayers),
             Enum value => new EnumValue(value, upLayers),
             Type value => new TypeValue(value, upLayers),
-            _ => new SystemObjectValue(tValue, upLayers)
+            _ => GetSystemObjectValueOrNull(tValue, upLayers)
         };
 
-        private static readonly Type ListType = typeof(List<>);
-        private static readonly Type ArrayType = typeof(Array);
-
-        private static bool IsListOrArray(Type type) =>
-            (type.IsGenericType
-                ? ListType.IsAssignableFrom(type.GetGenericTypeDefinition())
-                : ListType.IsAssignableFrom(type))
-            || ArrayType.IsAssignableFrom(type);
+        private static IShowValue? GetSystemObjectValueOrNull<T>(T tValue, int upLayers)
+        {
+            if (tValue is Array) return null;
+            var type = tValue?.GetType();
+            if (type == null) return null;
+            if (type.IsGenericType) return null;
+            return new SystemObjectValue(tValue, upLayers);
+        }
     }
 
     #region Class
 
     [Serializable]
-    public class SystemObjectValue : IShowValue
+    internal class SystemObjectValue : IShowValue
     {
-        public SystemObjectValue(object value, int upLayers)
+        public SystemObjectValue(object? value, int upLayers)
         {
             _value = value;
-            _disableValue = value.GetType().IsValueType;
+            _disableValue = value?.GetType().IsValueType ?? false;
             _upLayers = upLayers;
         }
 
-        // ReSharper disable once NotAccessedField.Local
-        [DisableIf(nameof(_disableValue), true)]
-        [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
-        [ReferencePicker(typeof(object), TypeGrouping.ByNamespace)]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [DisableIf(nameof(_disableValue), true),
+         LabelByParent(UpLayersSourceHandle = nameof(_upLayers)),
+         ReferencePicker(typeof(object), TypeGrouping.ByNamespace)]
+#endif
         [SerializeReference]
-        private object _value;
+        private object? _value;
 
         [NonSerialized] private bool _disableValue;
         [NonSerialized] private int _upLayers;
     }
 
     [Serializable]
-    public class UnityObjectValue : IShowValue
+    internal class UnityObjectValue : IShowValue
     {
-        public UnityObjectValue(UnityObject value, int upLayers)
+        public UnityObjectValue(UnityEngine.Object value, int upLayers)
         {
             this.value = value;
             _upLayers = upLayers;
         }
 
-        // ReSharper disable once NotAccessedField.Local
-        [InLineEditor] [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))] [SerializeField]
-        private UnityObject value;
+#if YUZE_USE_EDITOR_TOOLBOX
+        [InLineEditor, LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
+#endif
+        [SerializeField]
+        private UnityEngine.Object value;
 
         [NonSerialized] private int _upLayers;
     }
 
     [Serializable]
-    public abstract class BaseTypeValue<T> : IShowValue
+    internal abstract class BaseTypeValue<T> : IShowValue
     {
         protected BaseTypeValue(T value, int upLayers)
         {
@@ -112,8 +119,10 @@ namespace YuzeToolkit.InspectorTool
             _upLayers = upLayers;
         }
 
-        // ReSharper disable once NotAccessedField.Local
-        [Disable] [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))] [SerializeField]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable, LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
+#endif
+        [SerializeField]
         private T value;
 
         [NonSerialized] private int _upLayers;
@@ -122,7 +131,7 @@ namespace YuzeToolkit.InspectorTool
     #region BaseType
 
     [Serializable]
-    public class StringValue : BaseTypeValue<string>
+    internal class StringValue : BaseTypeValue<string>
     {
         public StringValue(string value, int upLayers) : base(value, upLayers)
         {
@@ -130,7 +139,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class BoolValue : BaseTypeValue<bool>
+    internal class BoolValue : BaseTypeValue<bool>
     {
         public BoolValue(bool value, int upLayers) : base(value, upLayers)
         {
@@ -138,7 +147,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class CharValue : BaseTypeValue<char>
+    internal class CharValue : BaseTypeValue<char>
     {
         public CharValue(char value, int upLayers) : base(value, upLayers)
         {
@@ -146,7 +155,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class ByteValue : BaseTypeValue<byte>
+    internal class ByteValue : BaseTypeValue<byte>
     {
         public ByteValue(byte value, int upLayers) : base(value, upLayers)
         {
@@ -154,7 +163,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class SByteValue : BaseTypeValue<sbyte>
+    internal class SByteValue : BaseTypeValue<sbyte>
     {
         public SByteValue(sbyte value, int upLayers) : base(value, upLayers)
         {
@@ -162,7 +171,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class ShortValue : BaseTypeValue<short>
+    internal class ShortValue : BaseTypeValue<short>
     {
         public ShortValue(short value, int upLayers) : base(value, upLayers)
         {
@@ -170,7 +179,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class UShortValue : BaseTypeValue<ushort>
+    internal class UShortValue : BaseTypeValue<ushort>
     {
         public UShortValue(ushort value, int upLayers) : base(value, upLayers)
         {
@@ -178,7 +187,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class IntValue : BaseTypeValue<int>
+    internal class IntValue : BaseTypeValue<int>
     {
         public IntValue(int value, int upLayers) : base(value, upLayers)
         {
@@ -186,7 +195,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class UIntValue : BaseTypeValue<uint>
+    internal class UIntValue : BaseTypeValue<uint>
     {
         public UIntValue(uint value, int upLayers) : base(value, upLayers)
         {
@@ -195,7 +204,7 @@ namespace YuzeToolkit.InspectorTool
 
 
     [Serializable]
-    public class LongValue : BaseTypeValue<long>
+    internal class LongValue : BaseTypeValue<long>
     {
         public LongValue(long value, int upLayers) : base(value, upLayers)
         {
@@ -203,7 +212,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class ULongValue : BaseTypeValue<ulong>
+    internal class ULongValue : BaseTypeValue<ulong>
     {
         public ULongValue(ulong value, int upLayers) : base(value, upLayers)
         {
@@ -211,7 +220,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class FloatValue : BaseTypeValue<float>
+    internal class FloatValue : BaseTypeValue<float>
     {
         public FloatValue(float value, int upLayers) : base(value, upLayers)
         {
@@ -220,7 +229,7 @@ namespace YuzeToolkit.InspectorTool
 
 
     [Serializable]
-    public class DoubleValue : BaseTypeValue<double>
+    internal class DoubleValue : BaseTypeValue<double>
     {
         public DoubleValue(double value, int upLayers) : base(value, upLayers)
         {
@@ -228,7 +237,7 @@ namespace YuzeToolkit.InspectorTool
     }
 
     [Serializable]
-    public class DecimalValue : BaseTypeValue<decimal>
+    internal class DecimalValue : BaseTypeValue<decimal>
     {
         public DecimalValue(decimal value, int upLayers) : base(value, upLayers)
         {
@@ -238,7 +247,7 @@ namespace YuzeToolkit.InspectorTool
     #endregion
 
     [Serializable]
-    public class EnumValue : IShowValue
+    internal class EnumValue : IShowValue
     {
         public EnumValue(Enum value, int upLayers)
         {
@@ -247,29 +256,33 @@ namespace YuzeToolkit.InspectorTool
             _upLayers = upLayers;
         }
 
-
-        // ReSharper disable once NotAccessedField.Local
-        [Disable] [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))] [SerializeReference]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable, LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
+#endif
+        [SerializeReference]
         private Enum value;
 
-        // ReSharper disable once NotAccessedField.Local
-        [Disable] [SerializeField] private string enumStr;
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable]
+#endif
+        [SerializeField]
+        private string enumStr;
+
         private int _upLayers;
     }
 
     [Serializable]
-    public class TypeValue : IShowValue
+    internal class TypeValue : IShowValue
     {
         public TypeValue(Type value, int upLayers)
         {
             this.value = value;
             _upLayers = upLayers;
         }
-
-        // ReSharper disable once NotAccessedField.Local
-        [Disable]
+#if YUZE_USE_EDITOR_TOOLBOX
+        [Disable, LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
+#endif
         [SerializeField]
-        [LabelByParent(UpLayersSourceHandle = nameof(_upLayers))]
         [TypeSelector(typeof(object),
             TypeSetting = ETypeSetting.AllowUnityObject | ETypeSetting.AllowAbstract | ETypeSetting.AllowGeneric |
                           ETypeSetting.AllowNotClass | ETypeSetting.AllowNotPublic |
